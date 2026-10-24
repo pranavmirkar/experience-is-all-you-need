@@ -1,0 +1,47 @@
+# Experience Is All You Need: Stage 1 harness
+
+A dependency-free (stdlib only), CPU-only harness for testing experience-selection
+policies on a stream of tasks. **Everything is simulated.** It validates software
+correctness and baseline plumbing. It makes no claim about real coding models, about
+VTAR being better than anything, or about novelty. See `RESEARCH_PLAN.md` and
+`docs/experiment_protocol.md`.
+
+## Setup
+
+```bash
+python3 -m pip install pytest      # only test dependency; Python >= 3.10
+```
+
+## Commands
+
+```bash
+python3 -m pytest -q                       # full test suite
+python3 scripts/run_pilot.py               # writes results/pilot/{config.json,results.jsonl}
+python3 scripts/summarize_results.py       # writes results/pilot/summary.md
+```
+
+`run_pilot.py` takes `--config` and `--out`. Each result row records config hash, scenario,
+policy, seed, metrics, accuracy matrix and a UTC timestamp. Metrics are identical across
+reruns; only timestamps differ.
+
+## Layout
+
+- `src/experience_learning/schemas.py` episode records; "verified" requires an external method
+- `buffer.py` TRAIN-only reservoir buffer with verification gate; `LeakageError`
+- `selection.py` frozen, sequential, uniform, loss, novelty, VTAR and VTAR ablations
+- `metrics.py` accuracy, forgetting, forward transfer, regression rate
+- `simulator.py` seeded world, hidden dynamics, locked final test set
+- `evaluation.py` sequential runner and experiment grid
+- `tests/` unit tests including leakage, determinism and equal-candidate checks
+
+## What is simulated
+
+One skill value per task family. Training raises the family's skill, moves others through a
+hidden transfer matrix, and unprotected families drift back (forgetting). Unverified
+corrections may be bad. Constants were set by hand.
+
+## What is not validated
+
+Any behaviour on real models or real code; the VTAR transfer and interference proxies
+(the pilot gives no support for them); the retrieval baseline (not implemented); CodeIt-style
+baselines; hypothesis thresholds H1 (not yet pre-registered); the literature gap claim.

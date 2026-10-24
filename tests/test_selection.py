@@ -1,0 +1,123 @@
+import random
+
+import pytest
+
+from experience_learning.buffer import LeakageError
+from experience_learning.schemas import Split
+from experience_learning.selection import (
+    ProbeItem,
+    SelectionContext,
+    VTARConfig,
+    VTARSelector,
+    build_policies,
+)
+
+from helpers import make_episode
+
+
+def ctx(probe=(), centroid=None, counts=None):
+    return SelectionContext(0, tuple(probe), centroid, counts or {})
+
+
+def pool(n=20):
+    fams = ["A", "B", "C"]
+    return [
+        make_episode(
+            f"e{i:02d}",
+            family=fams[i % 3],
+            verified=(i % 4 != 0),
+            tokens=80 + 10 * (i % 5),
+            loss=(i % 7) / 7,
+            embedding=((-1.0) ** i, 0.5 + i / 40),
+            stream_index=i,
+        )
+        for i in range(n)
+    ]
+
+
+REPLAY_POLICIES = [n for n in build_policies() if n not in ("frozen", "sequential")]
+
+
+@pytest.mark.parametrize("name", REPLAY_POLICIES)
+def test_choice_is_subset_within_budget_and_deterministic(name):
+    p = build_policies()[name]
+    cands = pool()
+    probe = [ProbeItem("A", (1.0, 0.0), True), ProbeItem("B", (0.0, 1.0), False)]
+    run = lambda: p.select(cands, 400, ctx(probe, (1.0, 0.0)), random.Random(3))
+    a, b = run(), run()
+    assert [e.episode_id for e in a] == [e.episode_id for e in b]
+    assert {e.episode_id for e in a} <= {e.episode_id for e in cands}
+    assert sum(e.tokens for e in a) <= 400
+    assert len({e.episode_id for e in a}) == len(a)
+
+
+@pytest.mark.parametrize("name", [n for n in REPLAY_POLICIES if n != "vtar_no_gating"])
+def test_gating_excludes_unverified(name):
+    chosen = build_policies()[name].select(pool(), 10_000, ctx((), (1.0, 0.0)), random.Random(0))
+    assert chosen and all(e.verified for e in chosen)
+
+
+def test_no_gating_ablation_can_pick_unverified():
+    chosen = build_policies()["vtar_no_gating"].select(pool(), 10_000, ctx((), (1.0, 0.0)), random.Random(0))
+    assert any(not e.verified for e in chosen)
+
+
+@pytest.mark.parametrize("name", list(build_policies()))
+def test_refuses_non_train_candidates(name):
+    bad = pool(3) + [make_episode("t", split=Split.FINAL_TEST)]
+    with pytest.raises(LeakageError):
+        build_policies()[name].select(bad, 1000, ctx(), random.Random(0))
+
+
+def test_loss_policy_orders_by_loss():
+    cands = [make_episode("a", loss=0.1), make_episode("b", loss=0.9), make_episode("c", loss=0.5)]
+    chosen = build_policies()["loss"].select(cands, 10_000, ctx(), random.Random(0))
+    assert [e.episode_id for e in chosen] == ["b", "c", "a"]
+
+
+def test_novelty_prefers_least_replayed_family():
+    cands = [make_episode(f"a{i}", family="A") for i in range(3)] + [make_episode("b0", family="B")]
+    chosen = build_policies()["novelty"].select(cands, 100, ctx(counts={"A": 5}), random.Random(0))
+    assert [e.family for e in chosen] == ["B"]
+
+
+def test_vtar_components_hand_calculated():
+    e = make_episode("x", family="A", tokens=100, loss=0.4, embedding=(1.0, 0.0))
+    probe = [ProbeItem("A", (1.0, 0.0), True), ProbeItem("B", (0.0, 1.0), False)]
+    sel = VTARSelector(VTARConfig())
+    (c,) = sel.components([e], ctx(probe, (-1.0, 0.0)))
+    assert c["L"] == pytest.approx(0.5 * 0.4 + 0.5 * 1.0)  # 0.7
+    assert c["T"] == pytest.approx(0.5)  # (cos 1 * failed + cos 0 * ok) / 2
+    assert c["I"] == pytest.approx(1.0)  # centroid is opposite
+    assert c["C"] == pytest.approx(1.0)
+    # 0.3*1 + 0.3*0.7 + 0.4*0.5 - 0.4*1 = 0.31
+    assert sel._score(c, 1.0) == pytest.approx(0.31, abs=1e-5)
+
+
+def test_vtar_score_is_zero_for_unverified_when_gated_and_clamped_at_zero():
+    sel = VTARSelector(VTARConfig())
+    unverified = {"L": 1, "T": 1, "I": 0, "C": 1, "gate": 0.0}
+    conflicting = {"L": 0, "T": 0, "I": 1, "C": 1, "gate": 1.0}
+    assert sel._score(unverified, 1.0) == 0.0
+    assert sel._score(conflicting, 1.0) == 0.0
+
+
+def test_vtar_cost_normalisation():
+    sel = VTARSelector(VTARConfig())
+    cheap = {"L": 0.5, "T": 0.5, "I": 0, "C": 0.5, "gate": 1.0}
+    dear = {**cheap, "C": 2.0}
+    assert sel._score(cheap, 1.0) > sel._score(dear, 1.0)
+
+
+def test_novelty_spreads_a_single_call_across_families():
+    # family C is far behind in cumulative counts, but one call must still cover A, B and C
+    cands = [make_episode(f"{f}{i}", family=f) for f in "ABC" for i in range(4)]
+    chosen = build_policies()["novelty"].select(cands, 300, ctx(counts={"A": 9, "B": 9, "C": 0}), random.Random(0))
+    assert sorted(e.family for e in chosen) == ["A", "B", "C"]
+
+
+def test_vtar_random_is_not_a_copy_of_uniform():
+    cands = pool(30)
+    a = build_policies()["uniform"].select(cands, 10_000, ctx(), random.Random(1))
+    b = build_policies()["vtar_random"].select(cands, 10_000, ctx(), random.Random(1))
+    assert [e.episode_id for e in a] != [e.episode_id for e in b]

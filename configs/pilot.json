@@ -1,0 +1,17 @@
+{
+  "name": "pilot",
+  "note": "Synthetic harness pilot. Software-correctness check only; says nothing about real coding models.",
+  "seeds": [0, 1, 2, 3, 4],
+  "policies": [
+    "frozen", "sequential", "uniform", "loss", "novelty", "vtar",
+    "vtar_no_novelty", "vtar_no_transfer", "vtar_no_interference", "vtar_no_gating", "vtar_random"
+  ],
+  "vtar": {"alpha": 0.3, "beta": 0.3, "gamma": 0.4, "delta": 0.4},
+  "world": {},
+  "scenarios": {
+    "aligned": {},
+    "proxy_uninformative": {"transfer_mode": "independent"},
+    "no_transfer_clean": {"transfer_mode": "none", "bad_correction_rate": 0.0},
+    "flat_token_value": {"token_value_exp": 0.0}
+  }
+}
