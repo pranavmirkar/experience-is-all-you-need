@@ -52,5 +52,5 @@ CodeIt-style baseline is an adaptation, not a reproduction; hypothesis threshold
 `src/experience_learning/stage2/` holds a sandbox for generated code (namespaces, private tmpfs,
 unprivileged uid, resource limits; refuses to run if isolation is not strong), a bank of 30
 function-level task templates with per-template train/dev/final-test splits, and episode collection with
-external verification. No model, package or dataset has been downloaded, and there are no model
-results. Status, measurements, estimates and the approval request are in `docs/stage2_plan.md`.
+external verification. Qwen2.5-Coder-0.5B was downloaded for a smoke test (outside the repo); there are no training
+results beyond a smoke test (`scripts/stage2_smoke.py`, needs torch/transformers/peft, which are not repo dependencies). Status and measurements are in `docs/stage2_plan.md`.

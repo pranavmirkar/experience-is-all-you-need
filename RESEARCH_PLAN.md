@@ -31,8 +31,8 @@ gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), 
 ## Next smallest steps
 
 1. Done in Stage 2 so far: sandboxed executor and a 30-template task bank (`docs/stage2_plan.md`).
-2. Awaiting approval: install CPU torch/transformers/peft, download Qwen2.5-Coder-0.5B (0.99 GB), run a ~20 minute smoke test (generation speed, base pass rate on dev tasks, one LoRA step).
-3. Decision gates after the smoke test: the benchmark discriminates (dev pass rate not near 0% or 100%); a reduced pilot is feasible at the measured speed.
+2. Done: smoke test on Qwen2.5-Coder-0.5B (results in `docs/stage2_plan.md` section 6; 10 tok/s, LoRA step under 1 s, base dev full-pass 2 of 14).
+3. Gate 2 (benchmark discriminates) is not yet established: five of six families at 0% full-pass on a thin dev set. Next: pass@8 dev diagnostic, more templates, realistic LoRA timing.
 4. Paired-variance pilot on dev tasks before pre-registering the H1 margin.
 5. Literature: remaining open items are listed in `docs/literature_review.md` (53 entries beyond the brief).
 
