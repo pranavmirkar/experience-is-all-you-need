@@ -1,4 +1,4 @@
-# Experience Is All You Need: Stage 1 harness
+# Experience Is All You Need: harness (Stage 1 simulated; Stage 2 foundation)
 
 A dependency-free (stdlib only), CPU-only harness for testing experience-selection
 policies on a stream of tasks. **Everything is simulated.** It validates software
@@ -18,6 +18,7 @@ python3 -m pip install pytest      # only test dependency; Python >= 3.10
 python3 -m pytest -q                       # full test suite
 python3 scripts/run_pilot.py               # writes results/pilot/{config.json,results.jsonl}
 python3 scripts/summarize_results.py       # writes results/pilot/summary.md
+python3 scripts/stage2_selfcheck.py        # Stage 2: isolation probe + reference solutions through the sandbox
 ```
 
 `run_pilot.py` takes `--config` and `--out`. Each result row records config hash, scenario,
@@ -45,3 +46,11 @@ corrections may be bad. Constants were set by hand.
 Any behaviour on real models or real code; the VTAR transfer and interference proxies
 (the pilot gives no support for them); the retrieval baseline (specified for Stage 2, not implemented); the
 CodeIt-style baseline is an adaptation, not a reproduction; hypothesis thresholds H1 (not yet pre-registered); the literature gap claim.
+
+## Stage 2 (foundation only)
+
+`src/experience_learning/stage2/` holds a sandbox for generated code (namespaces, private tmpfs,
+unprivileged uid, resource limits; refuses to run if isolation is not strong), a bank of 30
+function-level task templates with per-template train/dev/final-test splits, and episode collection with
+external verification. No model, package or dataset has been downloaded, and there are no model
+results. Status, measurements, estimates and the approval request are in `docs/stage2_plan.md`.

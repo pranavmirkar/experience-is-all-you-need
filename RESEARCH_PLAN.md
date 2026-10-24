@@ -30,10 +30,10 @@ gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), 
 
 ## Next smallest steps
 
-1. Finish the literature review: open items in `docs/literature_review.md` (21 papers read; targeted searches still to run).
-2. Decide on a small code model; report licence, size and VRAM before downloading anything.
-3. Build a sandboxed executor for generated code (isolated dir, timeouts, no network) with
-   function-level Python tasks grouped by family.
-4. Pilot variance estimate before pre-registering the H1 thresholds.
+1. Done in Stage 2 so far: sandboxed executor and a 30-template task bank (`docs/stage2_plan.md`).
+2. Awaiting approval: install CPU torch/transformers/peft, download Qwen2.5-Coder-0.5B (0.99 GB), run a ~20 minute smoke test (generation speed, base pass rate on dev tasks, one LoRA step).
+3. Decision gates after the smoke test: the benchmark discriminates (dev pass rate not near 0% or 100%); a reduced pilot is feasible at the measured speed.
+4. Paired-variance pilot on dev tasks before pre-registering the H1 margin.
+5. Literature: remaining open items are listed in `docs/literature_review.md` (53 entries beyond the brief).
 
 See `docs/experiment_protocol.md` for definitions, assumptions and the revision log.
