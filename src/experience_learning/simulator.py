@@ -230,6 +230,30 @@ class World:
         return tuple(items)
 
 
+def apply_batch(world: "World", s: list[float], batch: Sequence[Episode], fam_idx: Mapping[str, int]) -> None:
+    """Hidden update dynamics: mutate skills ``s`` for one optimiser step on ``batch``."""
+    cfg = world.cfg
+    token_share = [0] * cfg.n_families
+    for e in batch:
+        g = fam_idx[e.family]
+        token_share[g] += e.tokens
+        lat = world.latent[e.episode_id]
+        if lat.bad_correction:
+            s[g] -= cfg.bad_penalty * s[g]
+        else:
+            value = (e.tokens / cfg.reference_tokens) ** cfg.token_value_exp
+            strength = min(1.0, cfg.eta * value * (1 + cfg.difficulty_gain_slope * (lat.difficulty - 0.5)))
+            gain = strength * (1 - s[g])
+            s[g] += gain
+            for h in range(cfg.n_families):
+                if h != g:
+                    s[h] = min(1.0, max(0.0, s[h] + world.transfer[g][h] * gain))
+    batch_tokens = sum(token_share)
+    for h in range(cfg.n_families):
+        protection = min(1.0, token_share[h] / batch_tokens / cfg.protect_share)
+        s[h] -= cfg.forget_rate * max(0.0, s[h] - world.base_skill[h]) * (1 - protection)
+
+
 class Learner:
     """The simulated model: one skill per family. Updates follow hidden dynamics."""
 
@@ -246,26 +270,21 @@ class Learner:
         assert_trainable(batch)
         if not batch:
             return
-        cfg, w, s = self.world.cfg, self.world, self.skills
-        token_share = [0] * cfg.n_families
+        apply_batch(self.world, self.skills, batch, self._fam_idx)
         for e in batch:
-            g = self._fam_idx[e.family]
-            token_share[g] += e.tokens
-            lat = w.latent[e.episode_id]
-            if lat.bad_correction:
-                s[g] -= cfg.bad_penalty * s[g]
-            else:
-                value = (e.tokens / cfg.reference_tokens) ** cfg.token_value_exp
-                strength = min(1.0, cfg.eta * value * (1 + cfg.difficulty_gain_slope * (lat.difficulty - 0.5)))
-                gain = strength * (1 - s[g])
-                s[g] += gain
-                for h in range(cfg.n_families):
-                    if h != g:
-                        s[h] = min(1.0, max(0.0, s[h] + w.transfer[g][h] * gain))
             self.trained_ids.append(e.episode_id)
             self.update_tokens += e.tokens
-        batch_tokens = sum(token_share)
-        for h in range(cfg.n_families):
-            protection = min(1.0, token_share[h] / batch_tokens / cfg.protect_share)
-            s[h] -= cfg.forget_rate * max(0.0, s[h] - w.base_skill[h]) * (1 - protection)
         self.update_steps += 1
+
+    def counterfactual(self, batch: Sequence[Episode]):
+        """Skills that one step on ``batch`` would give, without changing this learner.
+
+        Privileged: it uses the hidden dynamics. Only reference selectors get it.
+        """
+
+        def run(extra: Sequence[Episode]) -> list[float]:
+            skills = list(self.skills)
+            apply_batch(self.world, skills, list(batch) + list(extra), self._fam_idx)
+            return skills
+
+        return run

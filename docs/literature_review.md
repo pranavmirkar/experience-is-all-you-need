@@ -1,149 +1,163 @@
 # Literature matrix
 
-Status 2026-10-24: **first pass complete for the 11 papers in the brief; not a systematic review.**
-Gap claims stay off until the open items at the end are done.
+Status 2026-10-24: **second pass.** 11 brief papers read, plus 10 further papers found by search and read.
+This is still not a systematic review (search log and open items at the end). Gap statements are
+provisional and marked as such.
 
 ## Provenance and scope
 
-All 11 papers were downloaded as PDFs and read as extracted text (arXiv for 7, PMLR/GitHub for 4).
-Title, authors and venue/ID match the brief in every case. Two version notes: CODESKILL is arXiv v2
-(25 Sep 2026); the SWE-Exp PDF is dated February 2026 (the brief says 2025 preprint).
+Papers were downloaded as PDFs and read as extracted text. In every case the latest arXiv version was read
+(checked against each paper's submission history). Title, authors and venue of the 11 brief papers match the brief.
 
-What I read: abstract, method, experiments, ablations and limitation/discussion sections of each. I did
-not read appendices in full (CODESKILL, GSE, SWE-Exp prompts and extra tables; SSR appendices only for
-compute and limitations), Reflexion's HotpotQA/ALFWorld sections, or Voyager's related work. "Not stated"
-means not stated in the text I read. I did not check any released code.
+What I read: abstract, method, experiments, ablations and limitation/discussion sections. Not read in full:
+appendices (most papers), Reflexion HotpotQA/ALFWorld, Voyager related work, CL-Bench appendices, LESS
+appendices. "Not stated" means not found in the text I read; for seeds and compute I also searched the
+extracted text for "seed", "runs", "confidence interval", "GPU" and similar. Numbers are the papers' own.
+Code status comes from the PDF text, the arXiv abstract page (comments field), or the README I fetched;
+I did not run or inspect released code except the SWE-Bench-CL metric file noted below.
 
-Cells give section or table references where it helps. Numbers are the papers' own, not reproduced.
+Version notes: CODESKILL v2 (25 Sep 2026); SWE-Exp v2 (2 Feb 2026; the brief says 2025);
+DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-CL has only v1.
 
-## Matrix
+## A. Papers listed in the brief
 
-| # | Work | Learning signal | Experience representation | Selection / retention | Weights change? | Test setup | Compute | Code |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Reflexion (Shinn 2023) | binary/scalar evaluator reward; for code, self-generated unit tests (§4.3) | verbal self-reflection text; memory capped at 1-3 items (§3) | most recent reflections (sliding window) | No | HumanEval/MBPP (Py, Rust), LeetcodeHardGym (40); GPT-4 | not stated | yes (repo named) |
-| 2 | Voyager (Wang 2023) | env feedback, execution errors, GPT-4 self-verification (§2.3) | executable JS skills, indexed by description embedding (§2.2) | GPT-4 curriculum picks next task; top-5 skill retrieval | No (GPT-4 API) | Minecraft, 3 runs/method, 160 iterations (Tab. 1) | GPT-4 cost named as limitation (§4) | not stated in text |
-| 3 | CodeIt (Butt 2024) | program execution; hindsight relabelling of goal to realised output (§2.2) | (program, inputs, realised outputs) triplets | prioritised replay, priority = fraction of demo outputs matched (§2.2) | Yes (CodeT5+ 220M, NLL, 1 epoch/meta-iteration) | ARC train to eval set, 400 tasks, 100 meta-iterations, 3 seeds (Fig. 4, 6) | 100k samples per learning stage (§3.1); GPU-hours not stated | yes |
-| 4 | SWE-Bench-CL (Joshi 2025) | none yet; proposes RAG memory agent (§6) | FAISS vectors of task summaries | top-k semantic retrieval, same-sequence first | No | 8 repos, 273 tasks, chronological + difficulty order (§3); **no results reported** | not stated | yes (repo named) |
-| 5 | AuPair (Mavalankar 2025) | unit-test score of fix vs guess (§2.1) | (guess, fix) pair + scores as 1-shot example | greedy submodular selection on a validation fix-quality matrix, with residual subtraction (Alg. 2) | No (inference-time ICL) | 7 competitive-programming sets, 5 LLMs, N=32 calls; in/out-of-dist and cross-model (§3) | pair generation + \|C\|x\|Dval\| LLM calls; total not tabulated | not stated in text |
-| 6 | SWE-Exp (Chen 2025/26) | patch validated against ground truth; failure cause annotated (§3.2) | "perspective" + "modification" experiences, LLM-distilled (§3.3) | embed issue type, top-10 then rerank agent picks k=1 (§4.4) | No | SWE-Bench-Verified 500; DeepSeek-V3 and Claude-4-Sonnet (Tab. 1) | 203K vs 189K tokens/instance, +37.5 s retrieval (Tab. 3) | anonymous link |
-| 7 | Metacognitive position (Liu 2025) | n/a (position paper) | n/a | argues agents should decide what/how to learn | n/a | no experiments | n/a | n/a |
-| 8 | CODESKILL (Li 2026) | verifier gain of skill-conditioned rollout over no-skill baseline, gated by an alignment judge, plus rubric quality reward (§3.3.2) | markdown skills, task-level and event-driven | learned add/merge/drop policy (Qwen3.5-4B, SFT then GRPO); dense retrieval | Skill manager yes; coding policy frozen | EnvBench, SWE-Bench Verified (150 held out), Terminal-Bench 2; two frozen policies (Tab. 1) | GRPO ~200 steps (Fig. 3); GPU-hours not stated | not stated in text |
-| 9 | GSE (Yang 2026) | task outcome; local replay of the originating failure (§3.2) | skills + typed relation graph (dependency, co-usage, conflict) | cluster consolidation; accept bank only if replay of relevant cases does not regress (§3.3.2) | No (DeepSeek-V4-Flash API) | bug-revealing tests (108 Java methods, 9 projects), FP filtering (500 Go reports); one-project-held-out (§4.1) | evolution 401.6K tokens/case; execution 593K (Tab. 4, §5.4) | not stated in text |
-| 10 | Self-play SWE-RL (Wei 2026) | binary: all tests pass; bug reward 1-(1+a)s for 0<s<1, penalty otherwise (Eq. 1-2) | self-generated bug artifacts (inject/weaken diffs, test script, parser) | learnability by solve rate s; higher-order bugs from failed attempts | Yes (CWM-sft 32B, RL, shared policy) | SWE-bench Verified (500), SWE-Bench Pro (731); one attempt each (§3.1) | 512 H100s per run (App.) | not stated in text |
-| 11 | Unfaithful self-evolvers (Zhao 2026) | n/a (evaluates ExpeL, Dynamic Cheatsheet, ReasoningBank, G-Memory) | raw trajectories vs condensed insights | retrieval as in each framework | No (frozen backbones) | 13 backbones, 9 environments; interventions: empty, shuffle, irrelevant, corrupt, filler (§3) | A800 GPUs, details App. C | yes (repo in abstract) |
+| # | Work | Learning signal | Experience representation | Selection / retention | Weights change? | Test setup | Compute | Seeds / variance | Code |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Reflexion (Shinn 2023) | evaluator reward; for code, self-generated unit tests (§4.3) | verbal reflection, memory cap 1-3 (§3) | most recent reflections | No | HumanEval/MBPP (Py, Rust), LeetcodeHardGym (40), GPT-4 | not stated | not stated | yes (github.com/noahshinn024/reflexion) |
+| 2 | Voyager (Wang 2023) | env feedback, errors, GPT-4 self-verification (§2.3) | executable JS skills, description-embedding index | GPT-4 curriculum; top-5 skill retrieval | No | Minecraft, 160 iterations | GPT-4 cost named a limitation | 3 runs/method (Tab. 1) | yes ("open-source codebase", arXiv comments) |
+| 3 | CodeIt (Butt 2024) | execution; hindsight relabelling (§2.2) | (program, inputs, realised outputs) | prioritised replay, priority = matched fraction of demo outputs | Yes (CodeT5+ 220M) | ARC, 400 eval tasks, 100 meta-iterations | 100k samples/learning stage; GPU-hours not stated | 3 seeds (Fig. 4, 6) | yes (github.com/Qualcomm-AI-research/codeit) |
+| 4 | SWE-Bench-CL (Joshi 2025) | none yet (RAG agent proposed) | FAISS vectors of task summaries | top-k semantic retrieval | No | 8 repos, 273 tasks; **no learning results** | not stated | n/a | yes (github.com/thomasjoshi/agents-never-forget) |
+| 5 | AuPair (Mavalankar 2025) | unit-test score of fix vs guess | (guess, fix) pair as 1-shot example | greedy submodular on validation fix-quality matrix | No (in-context) | 7 contest sets, 5 LLMs, N=32 | pair gen + \|C\|x\|Dval\| calls; total not tabulated | not stated | no link found in PDF or PMLR page |
+| 6 | SWE-Exp (Chen 2025/26) | patch validated vs ground truth | perspective + modification experiences (LLM-distilled) | embed top-10, rerank agent picks k=1 | No | SWE-Bench-Verified 500; DeepSeek-V3, Claude-4-Sonnet | 203K vs 189K tokens/instance | not stated | yes (github.com/YerbaPage/SWE-Exp, arXiv comments) |
+| 7 | Metacognitive position (Liu 2025) | n/a | n/a | argues agents should choose what/how to learn | n/a | no experiments | n/a | n/a | n/a |
+| 8 | CODESKILL (Li 2026) | skill-conditioned verifier gain over no-skill, gated by alignment judge, plus rubric reward | markdown skills (task-level, event-driven) | learned add/merge/drop policy | Skill manager yes; coding policy frozen | EnvBench, SWE-Bench Verified (150 held out), Terminal-Bench 2 | 4xH100 for training; ~200 GRPO steps | not stated | no link found |
+| 9 | GSE (Yang 2026) | task outcome; replay of originating failure | skills + typed relation graph | accept bank only if replay of relevant cases does not regress | No (API LLM) | 108 Java methods, 500 Go reports; one-project-held-out | 401.6K tokens/case evolution | temperature 0; seeds not stated | no link found |
+| 10 | Self-play SWE-RL (Wei 2026) | all-tests-pass; bug reward peaks at 0<solve rate<1 | self-generated bug artifacts | solve-rate learnability; higher-order bugs | Yes (CWM-sft 32B, RL) | SWE-bench Verified 500, SWE-Bench Pro 731 | 512 H100s per run | ~2% paired SE stated (App.) | no link found |
+| 11 | Unfaithful self-evolvers (Zhao 2026) | n/a (evaluates 4 frameworks) | raw trajectories vs condensed insights | per framework | No | 13 backbones, 9 environments | A800 GPUs | not stated | yes (github.com/Dreamcatcher0622/Faithfulness) |
 
-## Per-paper notes (what matters for VTAR)
+## B. Papers found by search (all read as above)
 
-**1. Reflexion.** The loop in Algorithm 1 repeats trials on one task; the stored reflections serve later trials
-of that task. It is not formulated as a cross-task stream, so a memory-only baseline for this project has to
-be designed (store/retrieve across tasks), not copied. For code, the evaluator is the model's own unit tests:
-Table 2 reports a 16.3% false-positive rate on MBPP (tests pass, solution wrong) and Reflexion is below the
-GPT-4 baseline there (77.1 vs 80.1, Table 1). Direct support for the brief's rule that model-generated checks
-are not verification.
+| # | Work | Relevance | What it does | Weights change? | Test setup | Seeds / variance | Code |
+|---|---|---|---|---|---|---|---|
+| 12 | PPER / BTP (Chen 2024, arXiv 2410.12236v2) | prioritised replay for code LLMs | priority = a*P(program) + (1-a)*test pass rate; rank-based sampling (§3.4) | Yes (GPT-2, GPT-Neo, WizardCoder-34B) | APPS, CodeContests, HumanEval | not stated; alpha tuned per dataset (App. B/C not read) | no link found |
+| 13 | Self-generated in-context examples (Sarukkai 2025, 2505.00234v3) | measured utility of stored experiences | only successful trajectories kept; exemplar value Q(tau) = retrieval-weighted outcome (Eq. 1) | No | ALFWorld, Wordcraft, InterCode-SQL; gpt-4o-mini | 5 trials; large trial-to-trial variance with identical procedure (Fig. 1) | no link found |
+| 14 | CL-Bench (Asawa 2026, 2606.05661, NeurIPS 2026) | benchmark + paired "gain" metric | gain g_t = reward stateful - reward of same system stateless on same instance (§4.2) | No (context-based systems only) | 6 domains incl. software engineering; Claude, GPT-5.4, Gemini | 5 rollouts in varied orders, 95% CIs | project website named; not checked |
+| 15 | SPEE (Ren 2026, 2608.02139v2) | measured marginal utility gate, then weight updates | candidate experience kept if mean reward gain on a held-out probe set exceeds eps (Eq. 9-11), then distilled (OPSD) and RL (GRPO) | Yes | math only: Qwen3-1.7/4/8B-Base, DAPO-math-17k, 5 benchmarks | not stated | github.com/rrrsj/SPEE per a search result; not verified |
+| 16 | DualSFT (Chen 2026, 2605.06166v2, NeurIPS 2026) | closest utility form to VTAR | data utility = local validation improvement of L_new + lambda*L_prior from gradients (Eq. 4-7); one-shot top-b after a 5% warmup | Yes (SFT) | Magicoder (code), MetaMathQA, Alpaca; Llama-3.2-3B, Gemma-3-4B, Qwen-3.5-9B; plasticity = HumanEval, stability = 4 out-of-domain benchmarks | 3 seeds, mean +/- std | stated available; link not seen |
+| 17 | LESS (Xia 2024) | gradient-based influence selection | LoRA-gradient similarity of train examples to few-shot target examples, Adam-aware; top 5% | Yes | MMLU, TyDiQA, BBH; Llama-2-7B/13B, Mistral | not checked in detail | yes (github.com/princeton-nlp/LESS) |
+| 18 | MIR (Aljundi 2019) | measured interference for replay | replay the stored samples whose loss rises most under a virtual SGD step on the incoming batch (§3.1) | Yes | MNIST splits, CIFAR-10, MiniImagenet | 15-20 runs | yes (github.com/optimass/Maximally_Interfered_Retrieval) |
+| 19 | RHO-LOSS (Mindermann 2022) | holdout-loss data selection | training loss minus irreducible loss from a holdout-trained model | Yes | Clothing-1M, CIFAR, BERT; i.i.d., not continual | across seeds (Fig. 1) | not found on arXiv page |
+| 20 | FOREVER (Feng 2026, 2601.03938v2, ACL 2026) | when to replay | schedule driven by optimiser update size; 2% of each task stored | Yes (LoRA) | 3 NLP CL benchmarks; Qwen3-0.6B, 4B | 3 runs / several task orders | yes (link in PDF) |
+| 21 | Forgetting in LMs (Marek 2026, 2605.26097) | replay without stored data | KL penalty on model-generated samples nearly removes forgetting; capacity limits it | Yes | pretrained small LMs; Llama-3.2-1B-Instruct on Verilog | not checked | yes (github.com/martin-marek/forgetting) |
 
-**2. Voyager.** Self-verification by GPT-4 is the most important component in its ablation (-73% items,
-§3.4), so "verified" there means model-judged. Skill library shows plateau without it (§3.4). Skills are code,
-so the memory-vs-weights question is answered by construction (no weight updates). Three runs per method.
+## Notes that matter for VTAR
 
-**3. CodeIt.** The closest replay baseline. Priority is the fraction of demonstration outputs matched, which
-favours experiences that solve real tasks. It is a success-based score with no transfer, interference or cost
-term. Ablation A3 (uniform instead of prioritised): policy-only performance 38/400 vs 49/400, cumulative 58 vs
-59 (Tab. 2), which the authors read as less forgetting. There is no explicit forgetting metric, 3 seeds, and
-one domain (ARC with a DSL, CodeT5+ 220M). Hyperparameters were tuned on a custom train/validation split
-(§3), test examples never enter the buffer (§2.2). Takeaway: a CodeIt-style priority is a required baseline
-(brief §5.4), as a documented adaptation, not a reproduction.
+**CodeIt (3).** Priority is the matched fraction of demo outputs, success-based, with no transfer,
+interference or cost term. Ablation A3 (uniform): policy-only 38/400 vs 49/400, cumulative 58 vs 59 (Tab. 2),
+read by the authors as less forgetting. No explicit forgetting metric; 3 seeds; one domain; hyperparameters
+tuned on a custom split (§3). Required baseline, as an adaptation.
 
-**4. SWE-Bench-CL.** A benchmark and metric proposal; its own text says full evaluation is ongoing. The
-preliminary harness runs gave pass rates mostly below 8.5% with harness mismatch, so no usable learning
-result exists (§5). Useful: low inter-task patch similarity (mean cosine 0.18, §4.1), which suggests transfer
-signals from surface similarity may be weak, and a prompt-poisoning probe showing irrelevant context shifts
-outputs (§4.2). Metric note: the printed forgetting formula takes `max_{1<=k<=j} a_{k,j}`, which as written
-includes k before task j is learned; I read it as a typo for k>=j and the repo should be checked. My
-`metrics.average_forgetting` uses `max_{f<=t<P-1}`.
+**PPER (12).** The only other prioritised-replay-for-code paper found. Its priority mixes model likelihood
+and pass rate. In the text I read there is no uniform-replay ablation, and the "APPS mixed" set is described
+as used "to train and evaluate" without a stated split (§4.2), so I would not treat its gains as evidence of
+prioritisation helping. Single-shot fine-tuning, not a stream.
 
-**5. AuPair.** Selection by *measured marginal gain on a validation set*, greedy with residual subtraction.
-That is a realised counterpart of the brief's ideal utility U(e) (gain on held-out problems per experience),
-bought with a large number of LLM calls and applied in context, not to weights. Their random-pair ablation
-shows selection matters in-context (12 AuPairs match 32 random pairs, §3.2). They also note AuPair can make
-individual fixes worse (§3.10). This is the main alternative to a proxy score: if VTAR's proxies cannot beat
-or track an AuPair-style measured-gain selector, the proxies add little. Not stated: total selection cost.
+**AuPair (5), CODESKILL (8), SPEE (15), exemplar curation (13).** Four papers estimate an experience's value
+by *measuring* what it adds on held-out items: AuPair on a validation matrix, CODESKILL against a no-skill
+baseline, SPEE on a probe set, (13) by retrieval-weighted outcomes. Three of them keep the model frozen.
+Only SPEE then updates weights, and only on maths. In (13), identical procedures vary a lot across 5 trials
+and some added trajectories lower performance, which bears on measurement noise for any such estimate.
 
-**6. SWE-Exp.** Experiences are LLM-distilled from trajectories of an earlier SWE-Search run on the same
-benchmark. Leakage control excludes same-repository experiences posterior to the target (§4.4, §6.1; the two
-passages word the rule differently). One retrieved experience is best: 42.0% vs 39.8% (two) and 39.0% (four)
-(§6.2). The text compares against 37.2% in §6.2 but Table 1 lists SWE-Search at 35.4% for the same model, so the
-baseline of record is unclear. One example experience cites the golden patch (§3.3.3); whether extraction uses
-the patch for failed trajectories is not stated. Limitation they state: no mechanism to judge applicability.
+**DualSFT (16), LESS (17), RHO-LOSS (19), MIR (18).** These are the closest prior work to VTAR's score.
+DualSFT's utility is a first/second-order validation-improvement estimate with a prior-capability penalty,
+the same form as U(e) = [dA - lambda*dF] / C without the cost term, applied to code SFT with plasticity
+(HumanEval) and stability (four benchmarks). MIR measures interference by a virtual update instead of an
+embedding cosine, and reports ER-MIR vs ER forgetting 7.0 vs 15.0 on MNIST-split over 20 runs (Tab. 1).
+RHO-LOSS selects by holdout-loss reduction for i.i.d. training. None of these works on a stream of verified
+coding experience with an equal-budget comparison to uniform, loss and CodeIt-style replay (as far as found).
+VTAR's embedding-cosine T_hat and I_hat are cheaper and cruder stand-ins for quantities these papers compute
+from gradients or virtual updates.
 
-**7. Metacognitive position paper.** Conceptual only. Relevant claims: "what to learn" is a planning decision
-(§5.3.1); fixed human-designed loops limit scaling; replay is named as an existing remedy for forgetting.
-Evidence is case studies of STaR, Voyager and Generative Agents, which the authors call preliminary.
-Their suggestion to test whether a controller can improve from its own errors maps to the brief's
-metacognition question and is not tested anywhere I read.
+**SWE-Bench-CL (4).** No learning results. Its printed forgetting formula takes `max_{1<=k<=j}`, which I
+read as a typo for k>=j. Checking `eval_v1/eval_procedure.py` at the main branch on 2026-10-24:
+`calculate_forgetting` and `calculate_backward_transfer` are called with the same results dict as both
+"initial" and "final" (lines ~1359-1367), so both are 0 by construction in that version; forward transfer is
+the pass-rate difference on the next task between a memory-enabled and a no-memory run. I did not inspect
+`eval_v2_agent` or `eval_v3_agent`. Do not adopt its code for metrics.
 
-**8. CODESKILL.** Utility is measured, not proxied: skill-conditioned verifier score minus a pre-cached
-no-skill average, multiplied by an alignment factor from an LLM judge (§3.3.2). That is a counterfactual
-ΔA estimate per skill with a frozen policy. The skill bank is built in two passes over the *test* instances,
-with provenance filtering to exclude a skill derived from the current instance (§4.1); the conclusion lists
-strictly streaming settings as future work. So it is transductive rather than a stream protocol. Gains: +11.03
-average pass rate over no-skill, +5.10 over the strongest baseline (abstract). Seeds and variance: not stated.
-Bank maintenance reduced skills from 1252 to 676 with the same or better pass rate (Tab. 2).
+**CL-Bench (14).** Useful design: pair each stateful run with the same system run statelessly on the same
+instance (gain), several rollouts in different orders, CIs. In its results full-context ICL is best
+(normalised gain 25.4%) and a dedicated memory system (ACE) costs the most ($62.8/run) for less gain (8.6%).
+Context-based systems only; parametric methods are listed as not evaluated. Supports a strong
+"just keep it in context" baseline for Stage 2.
 
-**9. GSE.** Adds a retention gate: a candidate skill bank is accepted only if replaying relevant historical cases
-maintains or improves performance (§3.3.2), plus a relation graph for conflicts. One-project-held-out protocol
-(§4.1), temperature 0. Small evaluation sets (108 methods; 500 reports), and the largest gains come with low
-baselines (e.g. OpenHands F1 0.08 base). Task type differs from coding-model pass rate (precision/recall/F1).
+**SWE-Exp (6).** One retrieved experience is best (42.0% vs 39.8% with two, 39.0% with four, §6.2). Text
+baseline 37.2% vs Table 1 SWE-Search 35.4%: unresolved. Leakage rule: exclude same-repository experiences
+posterior to the target. A §3.3.3 example cites the golden patch; whether extraction uses it is not stated.
 
-**10. Self-play SWE-RL.** Weights are updated by RL at large scale (512 H100s per run). The training-task
-selection signal is learnability: reward peaks for solve rates strictly between 0 and 1. Their own ablation
-finds solver feedback in the injector reward gave only a slight, "largely negligible" advantage over the
-consistency-only reward (§3.5). Reports about 2% paired standard error on SWE-bench Verified, which is the
-same order as the brief's 3-point H1 threshold. Reports training instability at scale (App. E).
-Closest to "experience generation", which the brief deliberately leaves out of scope.
+**Self-play SWE-RL (10).** Solver feedback in the injector reward gave a "slight and largely negligible"
+advantage (§3.5). About 2% paired SE on SWE-bench Verified, comparable to the brief's 3-point H1 margin.
 
-**11. Unfaithful self-evolvers.** Method for the H6 faithfulness test: intervene on experience content
-(empty / shuffle / irrelevant / corrupt / filler) and measure behaviour change. Finding: agents depend on raw
-trajectories but largely ignore condensed insights, even when condensed is the only experience (§4.2).
-All frameworks are frozen-weight. For weight-updating learners the analogue is training on shuffled or
-irrelevant experiences under an equal token and update budget; that analogue is mine, not the paper's.
+**Reflexion (1), Voyager (2), Zhao (11).** Reflexion's test-based evaluator had a 16.3% false-positive rate
+on MBPP (Tab. 2) and its loop is per-task retry. Voyager's self-verification is model-judged and its most
+important component (-73% items, §3.4). Zhao shows intervention controls (empty/shuffle/irrelevant/
+corrupt/filler) for frozen agents; the weight-update analogue is mine.
 
-## Cross-cutting observations for this project
+**Liu (7).** Position paper; "what to learn" as planning; no experiments.
 
-1. **Frozen-weight dominates.** 8 of 11 papers do not change the model's weights (memory, skills, in-context
-   pairs). Only CodeIt and SSR update weights, and neither studies selection by estimated transfer. Any
-   fine-tuning study therefore needs a memory/skills baseline, as the brief says.
-2. **Measured utility exists in-context.** AuPair (validation marginal gain) and CODESKILL (gain over no-skill)
-   both measure what a stored item adds. I found no paper that does this for *weight updates* on stream data
-   or approximates it cheaply. This is the only candidate gap so far, and it is based on a limited reading.
-3. **Replay evidence is thin.** The only replay-vs-uniform ablation I read is CodeIt A3 (3 seeds, ARC).
-   GSE's replay is a validation gate, not a training replay.
-4. **Verification is mostly model-judged** (Reflexion tests, Voyager critic, CODESKILL alignment judge,
-   SWE-Exp rerank). External verification is used in SWE-Exp, SSR, AuPair, GSE and CodeIt.
-5. **Variance is under-reported.** Seeds are not stated for most; SSR states about 2% noise; Voyager and CodeIt
-   use 3 runs. The H1 threshold of 3 points should be treated as untested until a pilot gives paired variance.
-6. **Leakage handling differs** (repo/time exclusion in SWE-Exp, provenance filter over a shared test pool in
-   CODESKILL, held-out project in GSE). The harness's split rules (family-level, locked final test) are stricter
-   than any of these.
+**GSE (9).** Retention gate by replaying relevant historical cases before accepting an update.
 
-## Changes this suggests for the plan (not yet applied)
+**FOREVER (20), Marek (21).** Address *when* to replay and *whether stored data is needed*, not which
+examples to replay; Marek's code-adjacent result (Verilog fine-tuning of Llama-3.2-1B-Instruct) is a
+replay-helps data point.
 
-- Add a CodeIt-style priority (matched-fraction) policy to the simulator baselines, labelled an adaptation.
-- Add an AuPair-style measured-marginal-gain selector as an oracle-ish reference in Stage 2, since it is the
-  nearest thing to the ideal U(e).
-- Keep the retrieval/memory baseline for Stage 2 and define it as cross-task retrieval, not Reflexion's per-task retry.
-- Pre-register the H1 margin only after a paired-variance pilot; SSR's 2% noise is a warning.
-- Add an experience-content control (shuffled / irrelevant experiences, equal budget) to the Stage 2 protocol for H6.
-- Check SWE-Bench-CL's repo for the forgetting definition before adopting it.
+## Cross-cutting observations (provisional)
 
-## Open items (needed before any gap claim)
+1. **Weights.** Of the 21 papers, weights are updated in CodeIt, PPER, SSR, SPEE, DualSFT, LESS, MIR,
+   RHO-LOSS, FOREVER, Marek (and CODESKILL's manager); the rest are frozen-weight. Fine-tuning work on
+   code selection exists (PPER, DualSFT) but is not a stream.
+2. **Measured utility is common; proxies are the novelty-poor part.** Measuring marginal gain on held-out
+   items appears in AuPair, CODESKILL, SPEE, (13), DualSFT, MIR. A cosine-similarity proxy is a weaker
+   version of these.
+3. **Narrowest candidate gap (unconfirmed).** Equal-budget comparison of transfer- and interference-aware
+   *selection of verified coding experience for weight updates in a stream*, against uniform, loss-,
+   novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported. I did not find
+   this in 21 papers, but the search is limited (see log).
+4. **Variance.** Most papers do not state seeds. Where stated: 3 (CodeIt, Voyager, DualSFT, FOREVER),
+   5 (13, CL-Bench), 15-20 (MIR). SSR reports ~2% evaluation noise; (13) shows large trial-to-trial spread.
+   The 3-point H1 margin remains untested.
+5. **Verification.** Model-judged checks: Reflexion tests, Voyager critic, CODESKILL alignment judge,
+   SWE-Exp rerank. External: SWE-Exp, SSR, AuPair, GSE, CodeIt, PPER (tests), SPEE (reward).
+6. **Leakage handling differs** (repo/time exclusion in SWE-Exp; provenance filter over a shared test pool
+   in CODESKILL; held-out project in GSE; PPER unclear). The harness split rules are stricter.
 
-1. Systematic search beyond the brief. Candidates surfaced by two quick searches, **unread**:
-   Possibility and Pass-rate Prioritized Experience Replay for code generation (arXiv 2410.12236);
-   Snorkel AI "Continual Learning Bench" (June 2026, dates inconsistent across pages);
-   SPEE (explicit experience evolution then policy optimisation); Self-Evolving GPT (ACL 2024);
-   arXiv 2505.00234 (in-context experience selection for agents; title not checked).
-2. Read appendices for compute and seeds (CODESKILL, GSE, SSR, SWE-Exp).
-3. Check released code for each paper and for Snorkel's benchmark.
-4. Check later versions of the 2026 preprints.
-5. Search specifically for influence/gradient-based or counterfactual selection of replay data for LLM
-   fine-tuning (my searches did not find any, which is weak evidence).
+## Plan changes: status
+
+| Change | Status |
+|---|---|
+| CodeIt-style priority baseline in the simulator, labelled an adaptation | **Applied** (`codeit_priority`, `selection.py`, tests) |
+| Measured-marginal-gain reference selector (AuPair-style) | **Applied in the simulator** as `oracle_gain`, a privileged reference using hidden dynamics. The real-model version (dev-probe measured gain) is specified in `docs/experiment_protocol.md` for Stage 2 |
+| Cross-task retrieval/memory baseline, defined as such, plus full-context ICL | Specified for Stage 2 in the protocol (not implementable honestly in the simulator) |
+| Pre-register H1 margin only after a paired-variance pilot | Procedure written in the protocol |
+| Shuffled / irrelevant experience control (H6) | Specified for Stage 2 in the protocol |
+| Check SWE-Bench-CL's forgetting definition | **Done** (finding above); do not reuse its metric code |
+| New, from this pass: gradient/virtual-update baselines (LESS-, DualSFT-, MIR-style) | Added to the Stage 2 baseline list in the protocol |
+
+## Search log
+
+Queries run (standard unless noted): continual learning coding agents replay selection benchmark;
+learning which experiences to replay / influence-based selection for code; MIR; RHO-LOSS; LESS;
+replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning Bench; SPEE.
+Results used as leads only; every paper listed in section B was downloaded and read.
+
+## Open items
+
+1. Searches not yet done: gradient/influence-based replay selection in continual *instruction tuning*;
+   curriculum or learnability selection for code RL beyond SSR; data-valuation (Shapley, influence
+   functions) for LLM fine-tuning; continual learning for code models (e.g. library/API evolution);
+   forward/backward-transfer estimation methods. Cited-by search on CodeIt, AuPair, DualSFT, SWE-Exp.
+2. Appendices: PPER alpha tuning (does it use test data?), CODESKILL and GSE seeds, DualSFT code link,
+   SWE-Exp extraction prompts (gold-patch use).
+3. Check released code for papers marked "no link found" (author pages, PMLR/OpenReview supplements).
+4. Check CL-Bench appendices for the software-engineering task details and cost accounting.
+5. Re-run the arXiv version check before any submission; 2026 preprints are changing quickly.

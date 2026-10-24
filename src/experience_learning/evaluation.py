@@ -62,7 +62,8 @@ def run_stream(world: World, policy: Selector, hook: Optional[SelectHook] = None
             centroid = _centroid([e.embedding for e in episodes])
             for step in range(cfg.steps_per_phase):
                 new = _sample_to_budget(pool, cfg.new_tokens_per_step, random.Random(f"batch:{seed}:{p}:{step}"))
-                ctx = SelectionContext(p, world.probe(learner.skills), centroid, dict(replay_counts))
+                cf = learner.counterfactual(new) if policy.needs_counterfactual else None
+                ctx = SelectionContext(p, world.probe(learner.skills), centroid, dict(replay_counts), cf)
                 if policy.scope == "past":
                     candidates = buffer.eligible(phase_start)
                 else:

@@ -28,7 +28,7 @@ reruns; only timestamps differ.
 
 - `src/experience_learning/schemas.py` episode records; "verified" requires an external method
 - `buffer.py` TRAIN-only reservoir buffer with verification gate; `LeakageError`
-- `selection.py` frozen, sequential, uniform, loss, novelty, VTAR and VTAR ablations
+- `selection.py` frozen, sequential, uniform, loss, novelty, CodeIt-style priority (adaptation), VTAR and ablations, and `oracle_gain` (privileged reference, simulator only)
 - `metrics.py` accuracy, forgetting, forward transfer, regression rate
 - `simulator.py` seeded world, hidden dynamics, locked final test set
 - `evaluation.py` sequential runner and experiment grid
@@ -43,5 +43,5 @@ corrections may be bad. Constants were set by hand.
 ## What is not validated
 
 Any behaviour on real models or real code; the VTAR transfer and interference proxies
-(the pilot gives no support for them); the retrieval baseline (not implemented); CodeIt-style
-baselines; hypothesis thresholds H1 (not yet pre-registered); the literature gap claim.
+(the pilot gives no support for them); the retrieval baseline (specified for Stage 2, not implemented); the
+CodeIt-style baseline is an adaptation, not a reproduction; hypothesis thresholds H1 (not yet pre-registered); the literature gap claim.

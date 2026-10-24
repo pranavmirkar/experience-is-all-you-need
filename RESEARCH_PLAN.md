@@ -25,12 +25,12 @@ pytest installed with `pip install pytest` (user-level dev dependency only).
 
 ## Out of scope until Stage 1 is accepted
 
-Model downloads, LoRA fine-tuning, real coding tasks, SWE-Bench-CL, published-baseline
-adaptation (CodeIt), the retrieval baseline, the literature matrix, locked final study.
+Model downloads, LoRA fine-tuning, real coding tasks, SWE-Bench-CL, the retrieval baseline and the
+gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), locked final study.
 
 ## Next smallest steps
 
-1. Finish the literature review: systematic search and open items in `docs/literature_review.md` (first pass on the 11 brief papers is done).
+1. Finish the literature review: open items in `docs/literature_review.md` (21 papers read; targeted searches still to run).
 2. Decide on a small code model; report licence, size and VRAM before downloading anything.
 3. Build a sandboxed executor for generated code (isolated dir, timeouts, no network) with
    function-level Python tasks grouped by family.

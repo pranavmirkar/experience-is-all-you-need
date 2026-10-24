@@ -16,7 +16,7 @@ import statistics
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Literal, Mapping, Optional, Sequence
+from typing import Callable, Literal, Mapping, Optional, Sequence
 
 from .buffer import assert_trainable
 from .schemas import Episode
@@ -39,6 +39,9 @@ class SelectionContext:
     probe: tuple[ProbeItem, ...]
     current_centroid: Optional[tuple[float, ...]]
     replay_counts: Mapping[str, int]
+    # Privileged simulator hook, set only for selectors with needs_counterfactual:
+    # maps extra episodes to the skills a step on (new batch + extra) would give.
+    counterfactual: Optional[Callable[[Sequence[Episode]], Sequence[float]]] = None
 
 
 def cosine(a: Sequence[float], b: Sequence[float]) -> float:
@@ -55,6 +58,7 @@ class Selector(ABC):
     name: str
     scope: Scope = "past"
     gate_verified: bool = True
+    needs_counterfactual: bool = False  # True only for privileged reference selectors
 
     @abstractmethod
     def rank(
@@ -146,6 +150,78 @@ class NoveltyReplay(Selector):
             if not by_family[fam]:
                 del by_family[fam]
         return out
+
+
+class CodeItPriorityReplay(Selector):
+    """Adaptation of CodeIt's prioritised replay (Butt et al. 2024), not a reproduction.
+
+    CodeIt samples experiences with priority proportional to the fraction of
+    demonstration outputs the program matches. Here the priority is the fraction of
+    the logged attempt's test outputs that passed, floored so failures stay
+    reachable, and sampling is weighted without replacement. No hindsight
+    relabelling, no iterative sampling stage, no program execution.
+    """
+
+    name = "codeit_priority"
+    floor = 0.05
+
+    @classmethod
+    def priority(cls, e: Episode) -> float:
+        flags = [t.passed for t in e.tool_outputs if t.passed is not None]
+        frac = sum(flags) / len(flags) if flags else 0.0
+        return max(cls.floor, frac)
+
+    def rank(self, candidates, ctx, rng):
+        # Efraimidis-Spirakis: key = u ** (1 / w), largest first
+        keyed = [(rng.random() ** (1.0 / self.priority(e)), e.episode_id, e) for e in candidates]
+        keyed.sort(key=lambda t: (-t[0], t[1]))
+        return [e for _, _, e in keyed]
+
+
+class MeasuredGainOracle(Selector):
+    """Privileged reference: greedy by *measured* marginal gain per token.
+
+    Counterpart of AuPair-style selection (Mavalankar et al. 2025): each candidate
+    is scored by the change in mean stream-family skill when added to the current
+    batch, divided by relative token cost, with the set grown greedily so later picks
+    are scored given earlier ones. It reads true skills through a hidden-dynamics
+    hook, so no real policy can use it. It is an upper-bound style reference and
+    must not be compared against H1 as if it were a deployable method.
+    """
+
+    name = "oracle_gain"
+    needs_counterfactual = True
+
+    def rank(self, candidates, ctx, rng):
+        raise NotImplementedError("oracle_gain overrides select")
+
+    def select(self, candidates, budget_tokens, ctx, rng):
+        assert_trainable(candidates)
+        if ctx.counterfactual is None:
+            raise ValueError("oracle_gain needs ctx.counterfactual (simulator only)")
+        pool = sorted((e for e in candidates if e.verified or not self.gate_verified), key=lambda e: e.episode_id)
+        if not pool:
+            return []
+        n_stream = len({p.family for p in ctx.probe}) or 1
+        median_tokens = statistics.median(e.tokens for e in pool)
+        chosen: list[Episode] = []
+        used = 0
+        base = ctx.counterfactual(chosen)
+        while True:
+            best, best_u, best_after = None, 0.0, None
+            for e in pool:
+                if e in chosen or used + e.tokens > budget_tokens:
+                    continue
+                after = ctx.counterfactual(chosen + [e])
+                gain = sum(a - b for a, b in zip(after[:n_stream], base[:n_stream])) / n_stream
+                u = gain / (e.tokens / median_tokens)
+                if u > best_u:
+                    best, best_u, best_after = e, u, after
+            if best is None:
+                return chosen
+            chosen.append(best)
+            used += best.tokens
+            base = best_after
 
 
 @dataclass(frozen=True)
@@ -246,11 +322,13 @@ def build_policies(vtar: VTARConfig = VTARConfig()) -> dict[str, Selector]:
         UniformReplay(),
         LossPrioritizedReplay(),
         NoveltyReplay(),
+        CodeItPriorityReplay(),
         VTARSelector(vtar, "vtar"),
         VTARSelector(replace(vtar, alpha=0.0), "vtar_no_novelty"),
         VTARSelector(replace(vtar, gamma=0.0), "vtar_no_transfer"),
         VTARSelector(replace(vtar, delta=0.0), "vtar_no_interference"),
         VTARSelector(replace(vtar, use_gating=False), "vtar_no_gating"),
         VTARSelector(replace(vtar, random_priorities=True), "vtar_random"),
+        MeasuredGainOracle(),
     ]
     return {p.name: p for p in policies}

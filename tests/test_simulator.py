@@ -108,3 +108,42 @@ def test_token_value_exp_controls_whether_length_matters():
 
     assert gain(1.0, 700) > 1.5 * gain(1.0, 350)
     assert gain(0.0, 700) == pytest.approx(gain(0.0, 350))
+
+
+def test_counterfactual_does_not_mutate_and_matches_real_step():
+    from experience_learning.simulator import Learner
+
+    world = World(SMALL, 0)
+    L = Learner(world)
+    batch = world.stream[0][:3]
+    before = list(L.skills)
+    cf = L.counterfactual(batch[:1])(batch[1:])
+    assert L.skills == before and L.update_steps == 0
+    L.step(batch)
+    assert cf == pytest.approx(L.skills)
+
+
+def test_only_privileged_selectors_receive_the_counterfactual_hook():
+    from experience_learning.selection import UniformReplay
+
+    seen = []
+
+    class Spy(UniformReplay):
+        name = "spy"
+
+        def rank(self, candidates, ctx, rng):
+            seen.append(ctx.counterfactual)
+            return super().rank(candidates, ctx, rng)
+
+    run_stream(World(SMALL, 0), Spy())
+    assert seen and all(c is None for c in seen)
+    assert POLICIES["oracle_gain"].needs_counterfactual
+    assert not any(p.needs_counterfactual for n, p in POLICIES.items() if n != "oracle_gain")
+
+
+def test_oracle_gain_runs_within_budget_and_beats_random_replay_on_average():
+    cap = SMALL.n_stream_families * SMALL.steps_per_phase * (SMALL.new_tokens_per_step + SMALL.replay_tokens_per_step)
+    res = [run_stream(World(SMALL, s), POLICIES["oracle_gain"]) for s in range(4)]
+    assert all(r["update_tokens"] <= cap for r in res)
+    uni = [run_stream(World(SMALL, s), POLICIES["uniform"]) for s in range(4)]
+    assert statistics.mean(r["average_accuracy"] for r in res) > statistics.mean(r["average_accuracy"] for r in uni)

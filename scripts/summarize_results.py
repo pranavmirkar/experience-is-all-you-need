@@ -19,7 +19,8 @@ COLS = [
     ("regression_rate", "regression"),
     ("update_tokens", "update tokens"),
 ]
-PAIRED_AGAINST = ["uniform", "loss", "novelty"]
+PAIRED_AGAINST = ["uniform", "loss", "novelty", "codeit_priority"]
+REFERENCE_ONLY = {"oracle_gain"}  # privileged; shown, never used as a comparator
 
 
 def fmt(xs, digits=3):
@@ -56,12 +57,13 @@ def main() -> int:
             for key, _ in COLS:
                 vals = [m[s][key] for s in seeds if m[s][key] is not None]
                 cells.append(fmt(vals, 1 if key == "update_tokens" else 3) if vals else "-")
-            out.append(f"| {pol} | " + " | ".join(cells) + " |")
+            label = f"{pol} (privileged reference)" if pol in REFERENCE_ONLY else pol
+            out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("\nPaired difference in final test pass rate (policy minus baseline), per-seed pairs:\n")
         out.append("| policy | " + " | ".join(f"vs {b}" for b in PAIRED_AGAINST) + " |")
         out.append("|---|" + "---|" * len(PAIRED_AGAINST))
         for pol in policies:
-            if pol in ("frozen",) or pol in PAIRED_AGAINST:
+            if pol in ("frozen",) or pol in PAIRED_AGAINST or pol in REFERENCE_ONLY:
                 continue
             cells = []
             for b in PAIRED_AGAINST:

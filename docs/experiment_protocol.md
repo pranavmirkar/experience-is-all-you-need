@@ -61,7 +61,7 @@ token cost. Weights are fixed at 0.3/0.3/0.4/0.4.
 ## Assumptions and decisions (simplest reversible choice)
 
 1. JSON configs instead of YAML, so the harness has no dependencies. Only `configs/pilot.json` exists; `final.yaml` belongs to Stage 4.
-2. The retrieval/memory-only baseline is not implemented. Simulating retrieval means assuming how much a stored solution helps, which would build the answer into the simulator. It needs a real model.
+2. The retrieval/memory-only baseline is not implemented in the simulator. Simulating retrieval means assuming how much a stored solution helps, which would build the answer into the simulator. It is specified for Stage 2 above.
 3. The literature matrix (`docs/literature_review.md`) has a first-pass reading of the 11 brief papers; the systematic search is open. Its section "Changes this suggests" lists protocol changes not yet applied.
 4. Python `random` seeded with strings is used for all randomness; results are identical across runs and processes.
 5. Seeds 0-4 for the pilot. No variance estimate has been used to fix thresholds; the H1 thresholds are untouched.
@@ -84,6 +84,57 @@ problems, not VTAR.
    expected to be inflated.
 3. **vtar_random** originally used the same RNG stream and shuffle as uniform
    and was identical to it. It now has its own stream.
+
+## Added in the literature-informed update
+
+- `codeit_priority`: **adaptation** of CodeIt's prioritised replay. Priority is the fraction of the logged
+  attempt's test outputs that passed (floor 0.05), sampled weighted without replacement. No hindsight
+  relabelling or program execution. In this simulator the attempt outcome carries no information about an
+  episode's value, so it is expected to behave like uniform replay; it is a plumbing check for the baseline.
+- `oracle_gain`: **privileged reference**, not a method. Greedy by measured marginal gain per token, where
+  gain is the change in mean stream-family skill when the candidate is added to the actual batch, computed
+  through a hidden-dynamics hook (`Learner.counterfactual`). It is the simulator counterpart of AuPair-style
+  measured-gain selection. Only selectors with `needs_counterfactual` receive the hook (tested). It must not
+  be used as an H1 comparator; it shows how much headroom a perfect proxy has.
+
+## Stage 2 protocol (specified, not implemented)
+
+These came from the literature pass (`docs/literature_review.md`) and bind any real-model run.
+
+Baselines, all under the fair-comparison rules above:
+1. Frozen, sequential fine-tuning, uniform, loss-prioritised, novelty/coverage replay (as in Stage 1).
+2. CodeIt-style priority (adaptation; document every difference from the paper).
+3. Cross-task memory baseline: store verified solutions or reflections from earlier tasks and retrieve by
+   similarity for later tasks, no weight update. This is **not** Reflexion's per-task retry loop. Add a
+   full-context in-context baseline (all prior experiences in the prompt up to the context budget), since
+   CL-Bench found full-context ICL beat dedicated memory systems.
+4. Gradient or virtual-update selectors as the stronger version of VTAR's proxies: a LESS-style
+   gradient-similarity selector, a DualSFT-style validation-improvement selector with a prior-capability
+   penalty, and a MIR-style selector (replay the stored examples whose loss rises most under a virtual update
+   on the incoming batch). Report their selection cost next to VTAR's.
+5. A dev-probe measured-gain reference (AuPair/SPEE-style): score a candidate by the change in pass rate on a
+   held-out dev probe after a trial update or in-context use. Dev probes only, never the final test.
+
+Metric rules:
+- Forgetting is defined in `metrics.py`. Do not reuse the SWE-Bench-CL code: its v1 forgetting and backward
+  transfer take the same dict as initial and final state and are 0 by construction.
+- Pair every adaptive run with a stateless run of the same model on the same instances (CL-Bench "gain")
+  and run several task orders.
+
+H6 content control: with equal token and update budget, compare (a) the selected experiences, (b) the same
+experiences with content shuffled across tasks, (c) irrelevant experiences, (d) no experience. Interventions
+follow Zhao et al.; applying them to weight updates is this project's adaptation.
+
+H1 pre-registration: do not fix the 3-point margin until a pilot gives the paired standard error of the
+difference between methods on the actual benchmark. Procedure: run the strongest simple baseline and a
+second copy of itself with a different seed on at least 5 seeds and 3 task orders; take the paired SE of the
+pass-rate difference; set the margin to a value that SE can resolve (at least 2 SE), write it into
+`configs/final.json` before any final-test run, and do not change it afterwards. Self-play SWE-RL reports
+about 2% paired SE on SWE-bench Verified, which is a warning that 3 points may not be resolvable.
+
+Measurement noise: AuPair-style and probe-based utilities are noisy for small probes (trial-to-trial spread
+is large in Sarukkai et al., Fig. 1). Size the probe from the pilot SE and report the estimator's rank
+correlation with realised gain before using it to select.
 
 ## Scenarios
 

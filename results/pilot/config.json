@@ -1,18 +1,20 @@
 {
   "name": "pilot",
-  "note": "Synthetic harness pilot. Software-correctness check only; says nothing about real coding models.",
+  "note": "Synthetic harness pilot. Software-correctness check only; says nothing about real coding models. oracle_gain is a privileged reference (reads true skills); it is not a deployable method and not an H1 comparator.",
   "policies": [
     "frozen",
     "sequential",
     "uniform",
     "loss",
     "novelty",
+    "codeit_priority",
     "vtar",
     "vtar_no_novelty",
     "vtar_no_transfer",
     "vtar_no_interference",
     "vtar_no_gating",
-    "vtar_random"
+    "vtar_random",
+    "oracle_gain"
   ],
   "scenarios": {
     "aligned": {},

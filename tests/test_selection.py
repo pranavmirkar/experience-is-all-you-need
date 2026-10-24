@@ -35,7 +35,7 @@ def pool(n=20):
     ]
 
 
-REPLAY_POLICIES = [n for n in build_policies() if n not in ("frozen", "sequential")]
+REPLAY_POLICIES = [n for n in build_policies() if n not in ("frozen", "sequential", "oracle_gain")]  # oracle needs the simulator hook
 
 
 @pytest.mark.parametrize("name", REPLAY_POLICIES)
@@ -62,7 +62,7 @@ def test_no_gating_ablation_can_pick_unverified():
     assert any(not e.verified for e in chosen)
 
 
-@pytest.mark.parametrize("name", list(build_policies()))
+@pytest.mark.parametrize("name", [n for n in build_policies() if n != "oracle_gain"])
 def test_refuses_non_train_candidates(name):
     bad = pool(3) + [make_episode("t", split=Split.FINAL_TEST)]
     with pytest.raises(LeakageError):
@@ -121,3 +121,32 @@ def test_vtar_random_is_not_a_copy_of_uniform():
     a = build_policies()["uniform"].select(cands, 10_000, ctx(), random.Random(1))
     b = build_policies()["vtar_random"].select(cands, 10_000, ctx(), random.Random(1))
     assert [e.episode_id for e in a] != [e.episode_id for e in b]
+
+
+def test_codeit_priority_uses_attempt_pass_fraction_with_floor():
+    from experience_learning.schemas import ToolOutput
+    from experience_learning.selection import CodeItPriorityReplay
+    from dataclasses import replace
+
+    base = make_episode("x")
+    passed = replace(base, tool_outputs=(ToolOutput("test", True), ToolOutput("test", True)))
+    half = replace(base, tool_outputs=(ToolOutput("test", True), ToolOutput("test", False)))
+    failed = replace(base, tool_outputs=(ToolOutput("test", False),))
+    none = replace(base, tool_outputs=())
+    assert CodeItPriorityReplay.priority(passed) == 1.0
+    assert CodeItPriorityReplay.priority(half) == 0.5
+    assert CodeItPriorityReplay.priority(failed) == CodeItPriorityReplay.floor
+    assert CodeItPriorityReplay.priority(none) == CodeItPriorityReplay.floor
+
+
+def test_codeit_priority_samples_high_priority_more_often():
+    from dataclasses import replace
+    from experience_learning.schemas import ToolOutput
+
+    good = [replace(make_episode(f"g{i}", family="A", tokens=100), tool_outputs=(ToolOutput("test", True),)) for i in range(5)]
+    bad = [replace(make_episode(f"b{i}", family="B", tokens=100), tool_outputs=(ToolOutput("test", False),)) for i in range(5)]
+    sel = build_policies()["codeit_priority"]
+    wins = sum(
+        sum(e.family == "A" for e in sel.select(good + bad, 200, ctx(), random.Random(s))) for s in range(200)
+    )
+    assert wins > 2 * (200 * 2 - wins)  # far more A than B among 2 picks per call
