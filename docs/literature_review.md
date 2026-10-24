@@ -1,6 +1,6 @@
 # Literature matrix
 
-Status 2026-10-24: **third pass.** 11 brief papers read, plus 15 further papers found by search (10 read in full sections, 5 skimmed or read for selection details only; marked).
+Status 2026-10-24: **fourth pass.** 11 brief papers read, plus 21 further papers found by search (read at the depth marked in each table; abstract-only entries are flagged).
 This is still not a systematic review (search log and open items at the end). Gap statements are
 provisional and marked as such.
 
@@ -59,6 +59,18 @@ DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-C
 | 24 | InsCL (Wang 2024, NAACL, 2403.11435) | replay amount per earlier task by Wasserstein task similarity, data picked by an instruction-information score | Yes (LLaMA-7B) | 16 tasks, several orders; +3.0 relative gain over random replay, +27.96 over no replay (abstract) | 3 training orders averaged | not checked |
 | 25 | CodeTask-CL (Yadav 2023, 2307.02435) | benchmark for continual learning on code generation/translation/summarisation/refinement; compares CL methods | Yes | CodeT5 + experience replay is a strong baseline; prompt pooling forgets; PP-TF fixes it | not checked | yes (github.com/amazon-science/codetask-cl-pptf) |
 | 26 | GrADS (Liu 2025, 2511.08620v1) *(skimmed)* | gradient-magnitude data selection for domain SFT, with a forgetting claim | Yes | CMedQA, LawQA, FinQA; Qwen/ChatGLM/Llama; baselines Random, LESS, others | not checked | not checked |
+
+### B3. Transfer-estimation and gradient-selection leads, followed up in the fourth pass
+
+| # | Work | What it does | Weights change? | Test setup | Seeds / variance | Code |
+|---|---|---|---|---|---|---|
+| 27 | Lie-bracket order prediction (Sweeney 2026, 2606.24993, ICML 2026) | pairwise score from the commutator of two sources' gradient updates predicts whether A then B or B then A gives lower target loss; one Hessian-vector product per source | Yes (small-step SGD ground truth; last 8 layers of Llama-3.2-1B) | Qwen2.5-1.5B, Llama-3.2-1B, Llama-3.1-8B; instruction-SFT, DPO, Pile domains, 85 Stack languages for a Python target, 56 MMLU subjects | 4-5 seeds in the tables I read; 1,020 Llama trials in Tab. 3 | not checked |
+| 28 | "First-order predictable but pairwise fragile" (Piontkovskaia & Nikolenko 2026, 2607.16821) | prospectively registered measurement of eight local-approximation properties around a multitask LoRA checkpoint | LoRA perturbations | nine transformers, 82M-7B, seven families | registered thresholds and dev/test split | not checked |
+| 29 | HESIT (Chen 2024, ACL Findings, 2405.10992) | exemplar selection by hyper-gradient influence on validation performance, without a Hessian; for episodic replay | Yes (GPT-2) | task-oriented dialogue CL, 37 domains; vs random, IFORM, GSS, ARPER, A-GEM, LAMOL, EWC | not stated in the part read | not checked |
+| 30 | HCTOS (Nguyen 2025, 2502.06544) | sequence-level forward/backward transferability measures (TFT, TRT) and a heuristic to choose task order | Yes | Split CIFAR-10, CIFAR-100, tiny-ImageNet; not language | not checked | not checked |
+| 31 | Weyssow et al. (FSE 2023, 2305.04106) | stream of programs with new, unseen APIs; compares replay (buffer of 200) and EWC/SI/RWalk | Yes (GPT-2-style decoder, RoBERTa-style encoder) | API call and API usage prediction | not checked | not checked |
+| 32 | For-Value (Deng 2026, 2508.10180v3) *(abstract only)* | forward-only data valuation for fine-tuning | n/a | LLMs and VLMs | not read | not checked |
+| 33 | DataInf (Kwon 2024, ICLR, 2310.00902) *(search summary only, not read)* | closed-form influence approximation for LoRA-tuned models | n/a | not read | not read | not read |
 
 ## Notes that matter for VTAR
 
@@ -122,6 +134,31 @@ on MBPP (Tab. 2) and its loop is per-task retry. Voyager's self-verification is 
 important component (-73% items, §3.4). Zhao shows intervention controls (empty/shuffle/irrelevant/
 corrupt/filler) for frozen agents; the weight-update analogue is mine.
 
+**Lie-bracket (27), "pairwise fragile" (28).** These bear directly on whether a cheap local estimate of
+transfer or interference can be trusted. In (27) the order prediction is made once at the starting weights
+and then checked against actual training: Llama-3.2-1B pairwise accuracy falls from 93.0% at k=1 step per
+domain to 81.5% at k=20 and 65.3% at k=50 (Tab. 3, 1,020 trials). It also ranks 85 Stack programming
+languages for a Python target in the 99th sampled percentile at k=1 but 86th at N=10, k=5 (Tab. 3 area).
+The unit being ordered is a whole source domain, not a single experience. (28), a prospectively registered
+study, finds first-order predictions of single-direction loss changes hold across its grid, but that
+order sensitivity between two updates sets in inside that window on over a third of (model, task pair)
+combinations, and states that "sample-stable prediction of task effects remains open". Together they
+argue that VTAR's T_hat and I_hat (and DualSFT's local surrogate) should be validated against realised
+gain at the training horizon actually used, not only at one step.
+
+**HESIT (29).** Hyper-gradient influence selection for GPT-2 dialogue CL beats random exemplars by 6.70%,
+5.94%, 13.33% and 7.86% relative on four metrics (§5.1), but random exemplars with replay already reach
+79.92 intent accuracy against 2.65 for vanilla sequential tuning (Tab. 1), and the other selection baselines
+(IFORM 81.10, GSS 81.36) sit within about 1.5 points of random. Replay does most of the work; selection adds
+a few points. Earlier in this review I listed HESIT as an instruction-tuning method; it is a dialogue-system method.
+
+**Weyssow et al. (31).** Evidence that code models forget earlier APIs under plain fine-tuning and that
+simple replay with a small buffer reduces it. Supports random replay as a strong default for code.
+
+**HCTOS (30), For-Value (32), DataInf (33).** HCTOS chooses task order, in vision benchmarks, so it is
+background only. For-Value and DataInf are cost-oriented influence estimators; I did not read their method
+sections, so I make no claims beyond what their titles and abstracts say.
+
 **CodeTask-CL (25), InsCL (24).** Show that replay with random exemplars is already a strong default for
 code models (CodeT5 + ER) and that smarter allocation across earlier tasks (InsCL) adds a few points over
 random replay in instruction tuning. Both use fixed task sequences, not verified agent experience.
@@ -148,7 +185,7 @@ replay-helps data point.
 4. **Narrowest candidate gap (unconfirmed).** Equal-budget comparison of transfer- and interference-aware
    *selection of verified coding experience for weight updates in a stream*, against uniform, loss-,
    novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported. I did not find
-   this in 26 papers, but the search is limited (see log).
+   this in 33 papers, but the search is limited (see log).
 5. **Variance.** Most papers do not state seeds. Where stated: 3 (CodeIt, Voyager, DualSFT, FOREVER),
    5 (13, CL-Bench), 15-20 (MIR). SSR reports ~2% evaluation noise; (13) shows large trial-to-trial spread.
    The 3-point H1 margin remains untested.
@@ -177,18 +214,19 @@ replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning
 gradient-based replay selection in continual instruction tuning; continual learning for code models
 (API evolution); data valuation / influence for self-generated samples; forward/backward transfer
 prediction and task-order selection.
-Results used as leads only; every paper in sections A, B and B2 was downloaded and read (GrADS skimmed).
+Fourth-pass queries: exact-title searches for the Lie-bracket paper, HESIT, HCTOS, the API-stream code paper,
+and DataInf/For-Value/LoGra (LoGra returned nothing).
+Results used as leads only; every paper in sections A, B, B2 and B3 was downloaded and read at the depth noted
+(GrADS skimmed; For-Value abstract only; DataInf not read).
 The data-valuation and self-improvement-selection query returned no coding-specific method; weak evidence
 of absence only.
 
 ## Open items
 
-1. Unread leads: HESIT (gradient-based replay selection, known only second-hand); the API-evolution
-   continual-learning stream for code models (name not confirmed); "The Geometry of Sequential Learning:
-   Lie-Bracket Prediction of Transfer Order" (ICML 2026; predicts whether order A then B or B then A gives
-   lower target loss, reported 81-94% sign accuracy across four LLMs; second-hand); HCTOS task-order
-   selection; data-valuation methods (DataInf, LoGra, For-Value). Searches still not done: curriculum or
-   learnability selection for code RL beyond SSR; cited-by search on CodeIt, AuPair, DualSFT, SWE-Exp.
+1. Still unread or only skimmed: DataInf and For-Value methods, GrADS, LoGra (not found), Continual Learning
+   From a Stream of APIs (2309.00023; a different setting, black-box APIs), "Optimal Task Order for Continual
+   Learning of Multiple Tasks" (ICML 2025). Searches not done: curriculum or learnability selection for code RL
+   beyond SSR; cited-by searches on CodeIt, AuPair, DualSFT, SWE-Exp, SuRe.
 2. Appendices: PPER alpha tuning (does it use test data?), CODESKILL and GSE seeds, DualSFT code link,
    SWE-Exp extraction prompts (gold-patch use).
 3. Check released code for papers marked "no link found" (author pages, PMLR/OpenReview supplements).

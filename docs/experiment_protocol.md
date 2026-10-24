@@ -132,6 +132,11 @@ pass-rate difference; set the margin to a value that SE can resolve (at least 2 
 `configs/final.json` before any final-test run, and do not change it afterwards. Self-play SWE-RL reports
 about 2% paired SE on SWE-bench Verified, which is a warning that 3 points may not be resolvable.
 
+Estimator validity: report the correlation between each proxy (T_hat, I_hat, gradient or probe scores) and
+realised gain at 1, 5, 20 and 50 update steps. Sweeney (2026) finds order-prediction accuracy falling from
+93% at 1 step to 65% at 50 steps on Llama-3.2-1B, and Piontkovskaia & Nikolenko (2026) find pairwise effects
+fragile inside the first-order validity window.
+
 Measurement noise: AuPair-style and probe-based utilities are noisy for small probes (trial-to-trial spread
 is large in Sarukkai et al., Fig. 1). Size the probe from the pilot SE and report the estimator's rank
 correlation with realised gain before using it to select.
