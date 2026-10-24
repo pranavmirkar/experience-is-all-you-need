@@ -132,6 +132,15 @@ pass-rate difference; set the margin to a value that SE can resolve (at least 2 
 `configs/final.json` before any final-test run, and do not change it afterwards. Self-play SWE-RL reports
 about 2% paired SE on SWE-bench Verified, which is a warning that 3 points may not be resolvable.
 
+Per-update reporting (from the evolving-agents survey, Zhou 2026): for each update report the acquisition rate
+G_t = P[score on a case rises] and the regression rate R_t = P[score falls], against a matched frozen copy
+that sees the same observations and budget; keep the roles of update data, selection data and final
+evaluation data disjoint; separate the cost of evolving (experience processing, candidate construction,
+selection) from the cost of using the result, and report amortised cost per use. Add Selective Experience Use
+(PATH-Bench: admit experience estimated to help, filter experience estimated to interfere) to the memory
+baselines, since it is the frozen-weight counterpart of VTAR's idea. Compare pre-commit gating against
+post-hoc rollback of admitted experience (Shang 2026).
+
 Estimator validity: report the correlation between each proxy (T_hat, I_hat, gradient or probe scores) and
 realised gain at 1, 5, 20 and 50 update steps. Sweeney (2026) finds order-prediction accuracy falling from
 93% at 1 step to 65% at 50 steps on Llama-3.2-1B, and Piontkovskaia & Nikolenko (2026) find pairwise effects

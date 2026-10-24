@@ -1,6 +1,6 @@
 # Literature matrix
 
-Status 2026-10-24: **fourth pass.** 11 brief papers read, plus 21 further papers found by search (read at the depth marked in each table; abstract-only entries are flagged).
+Status 2026-10-24: **fifth pass.** 11 brief papers read, plus 30 further papers found by search (read at the depth marked in each table).
 This is still not a systematic review (search log and open items at the end). Gap statements are
 provisional and marked as such.
 
@@ -58,7 +58,7 @@ DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-C
 | 23 | REPEAT (Gao 2023, ICSE, 2302.03482) | exemplars: keep the lowest-loss candidates, then pick diverse ones by TF-IDF clustering; plus adaptive parameter regularisation | Yes (CodeBERT, CodeT5) | code summarisation, vulnerability detection, clone detection; vs random exemplars (EMR) and EWC | not checked | not checked |
 | 24 | InsCL (Wang 2024, NAACL, 2403.11435) | replay amount per earlier task by Wasserstein task similarity, data picked by an instruction-information score | Yes (LLaMA-7B) | 16 tasks, several orders; +3.0 relative gain over random replay, +27.96 over no replay (abstract) | 3 training orders averaged | not checked |
 | 25 | CodeTask-CL (Yadav 2023, 2307.02435) | benchmark for continual learning on code generation/translation/summarisation/refinement; compares CL methods | Yes | CodeT5 + experience replay is a strong baseline; prompt pooling forgets; PP-TF fixes it | not checked | yes (github.com/amazon-science/codetask-cl-pptf) |
-| 26 | GrADS (Liu 2025, 2511.08620v1) *(skimmed)* | gradient-magnitude data selection for domain SFT, with a forgetting claim | Yes | CMedQA, LawQA, FinQA; Qwen/ChatGLM/Llama; baselines Random, LESS, others | not checked | not checked |
+| 26 | GrADS (Liu 2025, 2511.08620v1) *(method skimmed, evaluation read)* | after a one-epoch preliminary SFT, selects instances from gradient magnitude and its distribution; 5% selected beats full-data SFT; forgetting measured on general-capability benchmarks (C-Eval, GSM8K, Alpaca, safety), not on earlier tasks | Yes | CMedQA, LawQA, FinQA; Qwen/ChatGLM/Llama; baselines Random, LESS, others | not checked | not checked |
 
 ### B3. Transfer-estimation and gradient-selection leads, followed up in the fourth pass
 
@@ -69,8 +69,21 @@ DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-C
 | 29 | HESIT (Chen 2024, ACL Findings, 2405.10992) | exemplar selection by hyper-gradient influence on validation performance, without a Hessian; for episodic replay | Yes (GPT-2) | task-oriented dialogue CL, 37 domains; vs random, IFORM, GSS, ARPER, A-GEM, LAMOL, EWC | not stated in the part read | not checked |
 | 30 | HCTOS (Nguyen 2025, 2502.06544) | sequence-level forward/backward transferability measures (TFT, TRT) and a heuristic to choose task order | Yes | Split CIFAR-10, CIFAR-100, tiny-ImageNet; not language | not checked | not checked |
 | 31 | Weyssow et al. (FSE 2023, 2305.04106) | stream of programs with new, unseen APIs; compares replay (buffer of 200) and EWC/SI/RWalk | Yes (GPT-2-style decoder, RoBERTa-style encoder) | API call and API usage prediction | not checked | not checked |
-| 32 | For-Value (Deng 2026, 2508.10180v3) *(abstract only)* | forward-only data valuation for fine-tuning | n/a | LLMs and VLMs | not read | not checked |
-| 33 | DataInf (Kwon 2024, ICLR, 2310.00902) *(search summary only, not read)* | closed-form influence approximation for LoRA-tuned models | n/a | not read | not read | not read |
+| 32 | For-Value (Deng 2026, 2508.10180v3) *(method skimmed)* | forward-only data valuation; evaluated by mislabelled-data detection AUC and recall; reported up to 6x faster than gradient baselines | n/a | LLMs and VLMs | not checked | stated in abstract |
+| 33 | DataInf (Kwon 2024, ICLR, 2310.00902) *(method skimmed)* | closed-form influence approximation for LoRA; accuracy judged by Pearson correlation with exact influence (it falls as LoRA rank grows) and mislabel-detection AUC; 13 s vs 70 s (LiSSA) vs 11,279 s (exact) for 4,500 points | n/a | RoBERTa-large, Llama-2-13B-chat, Stable Diffusion | 95% error bars | not checked |
+
+### B4. Evaluation, memory-transfer and code-RL papers added in the fifth pass
+
+| # | Work | What it does | Weights change? | Test setup | Seeds / variance | Code |
+|---|---|---|---|---|---|---|
+| 34 | Self-Evolving Coding Agents survey (Zhou 2026, 2608.03392v4) *(survey; used as a coverage check and for evaluation guidance)* | taxonomy of agent updates (assets, architecture, parameters); evaluation prescriptions | n/a | n/a | n/a | n/a |
+| 35 | PATH-Bench (Yang 2026, 2608.01149v1) | measures directed task-to-task transfer in context (gain M_ij = S(t_j given t_i) - S(t_j alone)), votes signs across three LLMs, builds probe-centred sequences with helpful or interfering histories, reports AP, FWT, BWT, FGT; proposes Selective Experience Use (admit helpful, filter interfering) | No (external memories / skills) | single-turn code generation (BigCodeBench) and multi-turn tool use; eight agents | 3-5 seeds per entry | not checked |
+| 36 | Pre-commit gating (Shang 2026, 2608.05810v2) | unconditional skill accumulation peaks then degrades; removing source skills afterwards recovers little; gating with three critics plus marginal-gain subset selection | No | Terminal-Bench 2, four other backbones, a second benchmark | five evolution rounds; seeds not checked | not checked |
+| 37 | Memory Transfer Learning (Kim 2026, 2604.14004v1) | pooled memories from heterogeneous coding domains; four formats: trajectory, workflow, summary, insight | No (gpt-5-mini) | six coding benchmarks incl. Polyglot, LiveCodeBench v6 | not checked | project site named |
+| 38 | LifelongAgentBench (Zheng 2025, 2505.11942v3) | interdependent task sequences (Database, OS, Knowledge Graph); in-context experience replay of 1-16+ prior trajectories | No | several backbones | deterministic under fixed seeds (§4) | yes (source code link) |
+| 39 | FrogNano (Kim 2026, 2609.07925v5) | RL on synthetic SWE tasks kept near a target resolve rate for the current checkpoint (rollout-measured learnability) | Yes (Qwen3.5-4B, RL) | SWE-bench Verified, SWE-bench Pro, Terminal-Bench 2, PatchEval | 3 seeds averaged (§5) | project page named |
+| 40 | TAROT (Park 2026, 2602.15449v1) | code RL curriculum over test-case tiers; best curriculum depends on model capability | Yes | HumanEval(+), MBPP(+), LiveCodeBench v5; Qwen2.5 and Qwen3 | not checked | yes (github.com/deep-diver/TAROT) |
+| 41 | Optimal task order (Li & Hiratani, ICML 2025, PMLR 267 li25z) | linear teacher-student theory: order tasks from least to most representative, adjacent tasks dissimilar | Yes | synthetic and image classification | not checked | not checked |
 
 ## Notes that matter for VTAR
 
@@ -159,6 +172,46 @@ simple replay with a small buffer reduces it. Supports random replay as a strong
 background only. For-Value and DataInf are cost-oriented influence estimators; I did not read their method
 sections, so I make no claims beyond what their titles and abstracts say.
 
+**PATH-Bench (35), Shang (36), Memory Transfer (37), LifelongAgentBench (38).** Together they cover a
+frozen-weight version of the VTAR idea for coding agents. PATH-Bench *measures* directed transfer between code
+tasks and builds histories with controlled helpful or interfering content: with positive prefixes the target
+task gains 8.8-13.7 points, with negative prefixes it loses 9.9-15.9, random prefixes about 0-4 (1,800
+sequences, App. B). Its signs come from three LLMs, which agree with the consensus on only 75.1-77.5% of
+BigCodeBench pairs, and 14.0% of pairs have no majority and are dropped. It reports that strong forward
+transfer does not ensure retention and that later experience reshapes earlier gains, and proposes
+admitting helpful items while filtering interference. So "transfer- and interference-aware use of
+experience" is not new for memory-based agents. Shang finds ungated skill accumulation peaks and then
+degrades, and that rollback afterwards recovers only part of the loss, which supports gating at admission.
+Memory Transfer finds a 3.7% average gain from cross-domain memory and that more abstract formats (insights)
+transfer better than concrete trajectories. LifelongAgentBench finds in-context replay helps but non-monotonically
+with context limits. All four leave weights unchanged.
+
+**FrogNano (39), TAROT (40), Li & Hiratani (41).** Selection signals for code RL are policy-dependent: tasks
+kept near a target resolve rate (FrogNano) and a curriculum whose best direction depends on model
+capability (TAROT). In FrogNano, 300 real tasks chosen by the same learnability criterion reach 48.0% on
+SWE-bench Verified vs 49.1% for 300 synthetic tasks (iteration 1, from 39.4%); the abstract states
+calibration is important, but the unselected 1,500-task comparison in Fig. 1 had no numbers I could extract, so
+I could not check the size of the calibration effect. This conflicts mildly with Self-play SWE-RL, whose
+solve-rate feedback gave a negligible gain. Value of an experience depends on the current model, which a
+fixed similarity proxy does not capture. Li & Hiratani is background (task order, small networks).
+
+**Evaluation guidance (34).** The survey asks for a matched frozen agent, separate roles for update, selection
+and final evaluation data, acquisition and regression rates per update (G_t = P[score rises], R_t =
+P[score falls]), repeated checkpoints, several task orders, and evolution cost kept separate from use cost.
+It also points out that equal success rates can hide different trajectories and costs. This matches the
+harness design; the rates and the cost split were added to the protocol.
+
+**Resolved appendix questions.** SWE-Exp's extraction prompts (App. B.4, Prompts 4 and 5) give the model the
+golden patch for both successful and failed trajectories, so stored experience is distilled with access to
+the ground-truth fix; the ablation that drops extraction and uses problem plus golden patch directly as
+demonstrations scores 36.0% (-6.0). PPER's appendices A to C are not in the arXiv v2 PDF text I have, so
+whether alpha was tuned on test data is unresolved. CL-Bench's software-engineering task is 19 issues
+(9 tablib, 10 tenacity), 5 runs per system; gains are small and noisy (ICL with GPT-5.4: 0.690 +/- 1.959;
+Mem0: 2.980 +/- 1.100, the largest), and run costs range from $2.6 to $15.7 (App. B.6). CODESKILL and GSE
+do not state seeds in the text. I found no code link on the arXiv pages or in search results for Self-play
+SWE-RL (accepted to ICML 2026), AuPair, CODESKILL, GSE, DualSFT or Sarukkai et al.; this is evidence of no
+public link found, not of no code.
+
 **CodeTask-CL (25), InsCL (24).** Show that replay with random exemplars is already a strong default for
 code models (CodeT5 + ER) and that smarter allocation across earlier tasks (InsCL) adds a few points over
 random replay in instruction tuning. Both use fixed task sequences, not verified agent experience.
@@ -182,10 +235,13 @@ replay-helps data point.
 3. **Continual learning for code models exists** (CodeTask-CL, REPEAT, API-evolution streams), with
    replay baselines, but on fixed task sequences for encoder or seq2seq models, not selection of verified
    agent experience.
-4. **Narrowest candidate gap (unconfirmed).** Equal-budget comparison of transfer- and interference-aware
-   *selection of verified coding experience for weight updates in a stream*, against uniform, loss-,
-   novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported. I did not find
-   this in 33 papers, but the search is limited (see log).
+4. **Narrowest candidate gap (unconfirmed, narrower than before).** Transfer- and interference-aware use of
+   experience is already studied for frozen-weight coding agents (PATH-Bench, Shang, Memory Transfer), and
+   measured-gain selection exists for weight updates on static data (DualSFT, LESS) and for dialogue replay
+   (HESIT, MIR). What I did not find, in 41 papers, is an equal-budget comparison of transfer- and
+   interference-aware *selection of verified coding experience for weight updates in a stream* against
+   uniform, loss-, novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported.
+   The search is limited (see log).
 5. **Variance.** Most papers do not state seeds. Where stated: 3 (CodeIt, Voyager, DualSFT, FOREVER),
    5 (13, CL-Bench), 15-20 (MIR). SSR reports ~2% evaluation noise; (13) shows large trial-to-trial spread.
    The 3-point H1 margin remains untested.
@@ -214,6 +270,10 @@ replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning
 gradient-based replay selection in continual instruction tuning; continual learning for code models
 (API evolution); data valuation / influence for self-generated samples; forward/backward transfer
 prediction and task-order selection.
+Fifth-pass queries: learnability-based task selection for code RL; follow-ups to AuPair and SWE-Exp; code-release
+checks by title for CODESKILL, GSE, DualSFT, Self-play SWE-RL, AuPair and Sarukkai et al. (arXiv pages
+checked directly for the last three). The survey 'Self-Evolving Coding Agents' was mined for coverage and led to
+PATH-Bench, Shang, Memory Transfer and LifelongAgentBench.
 Fourth-pass queries: exact-title searches for the Lie-bracket paper, HESIT, HCTOS, the API-stream code paper,
 and DataInf/For-Value/LoGra (LoGra returned nothing).
 Results used as leads only; every paper in sections A, B, B2 and B3 was downloaded and read at the depth noted
@@ -223,12 +283,14 @@ of absence only.
 
 ## Open items
 
-1. Still unread or only skimmed: DataInf and For-Value methods, GrADS, LoGra (not found), Continual Learning
-   From a Stream of APIs (2309.00023; a different setting, black-box APIs), "Optimal Task Order for Continual
-   Learning of Multiple Tasks" (ICML 2025). Searches not done: curriculum or learnability selection for code RL
-   beyond SSR; cited-by searches on CodeIt, AuPair, DualSFT, SWE-Exp, SuRe.
-2. Appendices: PPER alpha tuning (does it use test data?), CODESKILL and GSE seeds, DualSFT code link,
-   SWE-Exp extraction prompts (gold-patch use).
-3. Check released code for papers marked "no link found" (author pages, PMLR/OpenReview supplements).
-4. Check CL-Bench appendices for the software-engineering task details and cost accounting.
-5. Re-run the arXiv version check before any submission; 2026 preprints are changing quickly.
+1. Second-hand only, from the survey (34): ContinualSkillBench (Guan 2026: sequential improvement comparable to
+   context-only adaptation), the memory-growth study (Xiong 2026: selective add/delete beats unrestricted
+   growth), the skill-extraction study (Huang 2026d: negative transfer from generated skills), SkillFlow,
+   SkillLearnBench, PAST-Bench, SEA-Eval, EvoMap (98% of 1.5M shared assets never reused). Not opened.
+2. Not opened or not found: LoGra, "Continual Learning From a Stream of APIs" (2309.00023, judged out of
+   scope from a search summary), HCTOS details, the survey's other references, a possible
+   TAROT/FrogNano uncalibrated baseline number.
+3. Searches not done: cited-by on CodeIt, DualSFT, SuRe, PATH-Bench; influence or gradient selection applied
+   to *self-generated* code data; continual pre-training or fine-tuning of code models with replay since 2024.
+4. Appendices still unseen: PPER A to C (not in the PDF text), DualSFT appendices, CODESKILL appendices on seeds.
+5. Re-run the arXiv version check before any submission; 2026 preprints are changing quickly (FrogNano is on v5).
