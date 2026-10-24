@@ -30,7 +30,7 @@ adaptation (CodeIt), the retrieval baseline, the literature matrix, locked final
 
 ## Next smallest steps
 
-1. Literature matrix (`docs/literature_review.md`) for the close papers in the brief.
+1. Finish the literature review: systematic search and open items in `docs/literature_review.md` (first pass on the 11 brief papers is done).
 2. Decide on a small code model; report licence, size and VRAM before downloading anything.
 3. Build a sandboxed executor for generated code (isolated dir, timeouts, no network) with
    function-level Python tasks grouped by family.

@@ -62,7 +62,7 @@ token cost. Weights are fixed at 0.3/0.3/0.4/0.4.
 
 1. JSON configs instead of YAML, so the harness has no dependencies. Only `configs/pilot.json` exists; `final.yaml` belongs to Stage 4.
 2. The retrieval/memory-only baseline is not implemented. Simulating retrieval means assuming how much a stored solution helps, which would build the answer into the simulator. It needs a real model.
-3. The literature matrix (`docs/literature_review.md`) is a Week 1 task and has not been started.
+3. The literature matrix (`docs/literature_review.md`) has a first-pass reading of the 11 brief papers; the systematic search is open. Its section "Changes this suggests" lists protocol changes not yet applied.
 4. Python `random` seeded with strings is used for all randomness; results are identical across runs and processes.
 5. Seeds 0-4 for the pilot. No variance estimate has been used to fix thresholds; the H1 thresholds are untouched.
 
