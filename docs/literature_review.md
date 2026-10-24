@@ -138,7 +138,7 @@ corrupt/filler) for frozen agents; the weight-update analogue is mine.
 transfer or interference can be trusted. In (27) the order prediction is made once at the starting weights
 and then checked against actual training: Llama-3.2-1B pairwise accuracy falls from 93.0% at k=1 step per
 domain to 81.5% at k=20 and 65.3% at k=50 (Tab. 3, 1,020 trials). It also ranks 85 Stack programming
-languages for a Python target in the 99th sampled percentile at k=1 but 86th at N=10, k=5 (Tab. 3 area).
+languages for a Python target in the 99th sampled percentile at k=1 but 86th at N=10, k=5 (the table beside Tab. 3; table number not checked).
 The unit being ordered is a whole source domain, not a single experience. (28), a prospectively registered
 study, finds first-order predictions of single-direction loss changes hold across its grid, but that
 order sensitivity between two updates sets in inside that window on over a third of (model, task pair)
