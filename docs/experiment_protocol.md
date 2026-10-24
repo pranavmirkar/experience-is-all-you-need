@@ -141,6 +141,19 @@ selection) from the cost of using the result, and report amortised cost per use.
 baselines, since it is the frozen-weight counterpart of VTAR's idea. Compare pre-commit gating against
 post-hoc rollback of admitted experience (Shang 2026).
 
+Sealed verification: the tests that decide whether an experience counts as verified, and the final test, must be
+authored and held outside the model being trained, with only pass/fail returned (Guo 2026, SEAL; Reflexion's 16.3%
+false-positive rate; SkillLearnBench's drift under self-feedback). Self-written tests may be used for generation
+but not for admission.
+
+Staleness: run the `loss` baseline in two forms, priority from the loss logged at generation time and priority
+recomputed on the current model each step, and add an age-decayed variant (FreshPER). Report all three; a stale
+baseline is not a fair comparator.
+
+Single-model claims: because in-context baselines tie or win in several 2026 benchmarks and gains vary by model,
+report every Stage 2 comparison for at least two base models and include the full-context in-context baseline.
+Report token cost next to success (SEA-Eval finds up to 31x differences at equal success).
+
 Estimator validity: report the correlation between each proxy (T_hat, I_hat, gradient or probe scores) and
 realised gain at 1, 5, 20 and 50 update steps. Sweeney (2026) finds order-prediction accuracy falling from
 93% at 1 step to 65% at 50 steps on Llama-3.2-1B, and Piontkovskaia & Nikolenko (2026) find pairwise effects

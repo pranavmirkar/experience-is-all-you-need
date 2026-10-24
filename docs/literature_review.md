@@ -1,6 +1,6 @@
 # Literature matrix
 
-Status 2026-10-24: **fifth pass.** 11 brief papers read, plus 30 further papers found by search (read at the depth marked in each table).
+Status 2026-10-24: **sixth pass.** 11 brief papers read, plus 42 further papers found by search or through a survey (read at the depth marked in each table).
 This is still not a systematic review (search log and open items at the end). Gap statements are
 provisional and marked as such.
 
@@ -84,6 +84,23 @@ DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-C
 | 39 | FrogNano (Kim 2026, 2609.07925v5) | RL on synthetic SWE tasks kept near a target resolve rate for the current checkpoint (rollout-measured learnability) | Yes (Qwen3.5-4B, RL) | SWE-bench Verified, SWE-bench Pro, Terminal-Bench 2, PatchEval | 3 seeds averaged (§5) | project page named |
 | 40 | TAROT (Park 2026, 2602.15449v1) | code RL curriculum over test-case tiers; best curriculum depends on model capability | Yes | HumanEval(+), MBPP(+), LiveCodeBench v5; Qwen2.5 and Qwen3 | not checked | yes (github.com/deep-diver/TAROT) |
 | 41 | Optimal task order (Li & Hiratani, ICML 2025, PMLR 267 li25z) | linear teacher-student theory: order tasks from least to most representative, adjacent tasks dissimilar | Yes | synthetic and image classification | not checked | not checked |
+
+### B5. Second-hand items opened, plus replay-staleness and verification papers (sixth pass)
+
+| # | Work | What it does | Weights change? | Test setup | Seeds / variance | Code |
+|---|---|---|---|---|---|---|
+| 42 | SEAL (Guo 2026, 2607.24300) | agents that rewrite their own policy and tests accept edits on self-authored checks; compares each candidate with the incumbent through a sealed audit the agent cannot see or author, returning only accept/reject | No (policies, heuristics) | heuristic-learning tasks; six models | three seeds | not checked |
+| 43 | SkillLens study (Huang 2026, 2605.23899) | utility-grounded study of model-generated skills across extractors and consumers; finds non-trivial negative transfer; a meta-skill reduces it | No | five agentic domains | not checked | https://aka.ms/SkillLens (stated in abstract) |
+| 44 | ContinualSkillBench (Guan 2026, 2608.03874v3) | in-context continual skill learning; compares keeping context and feedback with maintaining an explicit skill library | No | five domains x 100 tasks ordered by difficulty; two models, three domains in the comparison | not checked | not checked |
+| 45 | SkillLearnBench (Zhong 2026, 2604.20087) | benchmark of continual skill-learning methods; self-feedback alone induces recursive drift, external feedback helps | No | 20 verified tasks, 15 sub-domains | not checked | open-sourced (stated in abstract) |
+| 46 | SkillFlow (Zhang 2026, 2604.17308) | lifelong skill discovery, patching and reuse benchmark | No | 166 tasks, 20 families | not checked | project page named |
+| 47 | SEA-Eval (Jiang 2026, 2604.08988v3) | benchmark for self-evolving agents over sequential task streams | No | not checked | not checked | not checked |
+| 48 | EvoMap study (Ye 2026, 2605.25815) | measurement of a shared agent-skill network: 1.5M assets, 128K agents | n/a | n/a | n/a | n/a |
+| 49 | Memory management study (Xiong 2026, 2505.16067, ACL 2026) | memory addition and deletion policies; "experience-following": similar retrieved records induce similar outputs, so errors propagate | No | RegAgents, EHRAgents, AgentDriver, CIC-IoT agent (not coding) | not checked | not checked |
+| 50 | FreshPER (Ma 2026, 2604.16918) | prioritised replay for LLM/VLM RL with an exponential age decay on priorities | Yes (REINFORCE++) | eight tasks incl. NQ Search, AIME, Sokoban; Qwen2.5 0.5B/3B/7B | common settings list seed 42 | yes (github.com/Vision-CAIR/Freshness-Aware-PER) |
+| 51 | Rollout-level advantage-prioritised replay for GRPO (Yoo 2026, 2606.04560) *(skimmed)* | stores individual rollouts, priority from advantage magnitude, age eviction | Yes | reasoning benchmarks; uniform vs prioritised compared | mean +/- std over seeds | not checked |
+| 52 | SCoder (Zhang 2025, 2509.07858) *(skimmed)* | iterative self-distillation of a code-data synthesiser; final filter keeps samples whose gradients align with proprietary-LLM data | Yes | DeepSeek-Coder-based models | not checked | not checked |
+| 53 | LoGra (Choe 2024, 2405.13954) *(search summary only, not opened)* | gradient projection for scalable influence functions | n/a | n/a | n/a | n/a |
 
 ## Notes that matter for VTAR
 
@@ -212,6 +229,45 @@ do not state seeds in the text. I found no code link on the arXiv pages or in se
 SWE-RL (accepted to ICML 2026), AuPair, CODESKILL, GSE, DualSFT or Sarukkai et al.; this is evidence of no
 public link found, not of no code.
 
+**Replay priorities go stale (50, 51).** FreshPER reports that standard prioritised replay, with priority
+|reward|, underperforms plain on-policy training on most of its tasks because the model changes faster than the
+stored priorities, and that an age decay exp(-age/tau) removes the problem. Its comparison has on-policy, standard
+PER and FreshPER arms but no uniform-replay arm, and the common settings list a single seed (42). My `loss`
+baseline ranks by a loss logged when the episode was generated, so it is exposed to the same staleness, while
+VTAR's L term refreshes from the probe each step. This is a baseline-fairness issue; a refreshed-loss variant
+is added to the Stage 2 protocol. The GRPO paper (51) bounds staleness by evicting old rollouts.
+
+**Verification and sealed checks (42, 45).** SEAL's setting is self-modifying agents, not coding, but its result
+supports the brief's rule: when the agent controls both the thing being optimised and the check, the check
+can stay near perfect while real performance falls. Weaker agents damage previously acquired strategies behind
+easy self-tests. SkillLearnBench reaches the same conclusion from another side: self-feedback alone drifts,
+external feedback improves. Reflexion's 16.3% false-positive rate and Voyager's model-judged critic are the same
+issue in earlier work.
+
+**In-context baselines keep winning or tying (44, 46, 43, plus CL-Bench).** ContinualSkillBench finds that keeping
+context and feedback without skill maintenance gives nearly the same mean as a maintained skill library, SkillFlow
+finds high skill usage does not imply utility (a model with 66.87% usage gains 0.60 points), and the SkillLens
+study finds negative transfer from model-generated skills. Gains are inconsistent across models and tasks. Any
+claim of benefit from selected or stored experience needs the full-context baseline and several models.
+
+**Memory growth (49).** Adding everything performs worse than controlled addition and deletion in its agent tasks,
+because errors propagate through similar retrieved records, and evaluator quality limits the benefit. Tasks are
+not coding, and I did not verify its headline gain figure. **EvoMap (48):** the abstract reports 98% of shared assets
+never reused, as credits reward publishing rather than adoption.
+
+**Cost (47).** SEA-Eval reports token use differing by up to 31.2x between frameworks at comparable success.
+Report tokens, not only success.
+
+**Gradient selection for self-generated code (52).** The only coding self-training paper found that applies a
+gradient-based influence filter to model-generated data compares against samples from proprietary LLMs, not a
+held-out dev utility with a retention penalty. Skimmed only.
+
+**Resolved.** The survey's "Xiong et al. 2026" is 2505.16067 and "Huang et al. 2026d" is 2605.23899. DualSFT:
+no code URL appears in the PDF; seeds are {42, 123, 2026} on A100-80GB GPUs, and the Alpaca result is
+single-seed. No citation-index tool is available here, so cited-by checks were done as topic searches
+(CodeIt/PPER-style code replay, DualSFT-style selection, PATH-Bench-style transfer estimation), which returned
+FreshPER, the GRPO replay paper, SCoder and the memory-management study.
+
 **CodeTask-CL (25), InsCL (24).** Show that replay with random exemplars is already a strong default for
 code models (CodeT5 + ER) and that smarter allocation across earlier tasks (InsCL) adds a few points over
 random replay in instruction tuning. Both use fixed task sequences, not verified agent experience.
@@ -238,7 +294,7 @@ replay-helps data point.
 4. **Narrowest candidate gap (unconfirmed, narrower than before).** Transfer- and interference-aware use of
    experience is already studied for frozen-weight coding agents (PATH-Bench, Shang, Memory Transfer), and
    measured-gain selection exists for weight updates on static data (DualSFT, LESS) and for dialogue replay
-   (HESIT, MIR). What I did not find, in 41 papers, is an equal-budget comparison of transfer- and
+   (HESIT, MIR). What I did not find, in 53 papers, is an equal-budget comparison of transfer- and
    interference-aware *selection of verified coding experience for weight updates in a stream* against
    uniform, loss-, novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported.
    The search is limited (see log).
@@ -270,6 +326,9 @@ replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning
 gradient-based replay selection in continual instruction tuning; continual learning for code models
 (API evolution); data valuation / influence for self-generated samples; forward/backward transfer
 prediction and task-order selection.
+Sixth-pass queries: memory management and experience-following; continual fine-tuning of code models with replay
+(2025-2026); influence or gradient selection for self-generated code data; LoGra; prioritised replay for LLM agents
+(uniform vs prioritised). Second-hand survey items were opened by arXiv ID taken from the survey's reference list.
 Fifth-pass queries: learnability-based task selection for code RL; follow-ups to AuPair and SWE-Exp; code-release
 checks by title for CODESKILL, GSE, DualSFT, Self-play SWE-RL, AuPair and Sarukkai et al. (arXiv pages
 checked directly for the last three). The survey 'Self-Evolving Coding Agents' was mined for coverage and led to
@@ -283,14 +342,15 @@ of absence only.
 
 ## Open items
 
-1. Second-hand only, from the survey (34): ContinualSkillBench (Guan 2026: sequential improvement comparable to
-   context-only adaptation), the memory-growth study (Xiong 2026: selective add/delete beats unrestricted
-   growth), the skill-extraction study (Huang 2026d: negative transfer from generated skills), SkillFlow,
-   SkillLearnBench, PAST-Bench, SEA-Eval, EvoMap (98% of 1.5M shared assets never reused). Not opened.
-2. Not opened or not found: LoGra, "Continual Learning From a Stream of APIs" (2309.00023, judged out of
-   scope from a search summary), HCTOS details, the survey's other references, a possible
-   TAROT/FrogNano uncalibrated baseline number.
-3. Searches not done: cited-by on CodeIt, DualSFT, SuRe, PATH-Bench; influence or gradient selection applied
-   to *self-generated* code data; continual pre-training or fine-tuning of code models with replay since 2024.
-4. Appendices still unseen: PPER A to C (not in the PDF text), DualSFT appendices, CODESKILL appendices on seeds.
-5. Re-run the arXiv version check before any submission; 2026 preprints are changing quickly (FrogNano is on v5).
+1. Leads found but not opened: TrackStar (2410.17413), LoGra (2405.13954), IProX (2602.17835), ClusterUCB
+   (2506.10288), Influence Distillation (2505.19051), AgentHER (2603.21357), MEMO (2603.09022), "Arnal et al.
+   2026" (cited by the GRPO replay paper; not retrieved), the survey's remaining references (e.g. SWE-MeM,
+   SkillForge, SkillsVote).
+2. Not opened or incomplete: "Continual Learning From a Stream of APIs" (2309.00023, judged out of scope from a
+   search summary), HCTOS details, a FrogNano uncalibrated-baseline number, PPER appendices A to C (not in the PDF
+   text), CODESKILL appendices on seeds.
+3. Searches not done: a citation-index search (no tool available here); work on estimating transfer between code
+   tasks from small probes with a measured-versus-realised check; continual pre-training of code models with
+   selective replay since 2024.
+4. Re-run the arXiv version check before any submission; 2026 preprints change quickly (FrogNano is on v5,
+   ContinualSkillBench on v3, the survey on v4).
