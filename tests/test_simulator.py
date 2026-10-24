@@ -147,3 +147,39 @@ def test_oracle_gain_runs_within_budget_and_beats_random_replay_on_average():
     assert all(r["update_tokens"] <= cap for r in res)
     uni = [run_stream(World(SMALL, s), POLICIES["uniform"]) for s in range(4)]
     assert statistics.mean(r["average_accuracy"] for r in res) > statistics.mean(r["average_accuracy"] for r in uni)
+
+
+def test_observed_loss_tracks_learning_and_is_deterministic():
+    from experience_learning.simulator import Learner
+
+    w = World(SMALL, 0)
+    L = Learner(w)
+    e = w.stream[0][0]
+    before = L.observed_loss(e, 3)
+    assert before == L.observed_loss(e, 3)  # same step, same value
+    for _ in range(10):
+        L.step(w.stream[0][:6])
+    assert L.observed_loss(e, 3) < before  # learned family: lower loss
+
+
+def test_scoring_passes_are_counted_only_where_a_forward_pass_happens():
+    r = lambda name: run_stream(World(SMALL, 0), POLICIES[name])["scoring_passes"]
+    assert r("uniform") == 0 and r("loss") == 0
+    assert r("loss_fresh") > r("loss_per") > 0  # fresh scores every candidate; PER only refreshes replayed ones
+    assert r("vtar") > 0  # probe items are scored every step
+
+
+def test_only_selectors_that_need_it_receive_current_loss():
+    from experience_learning.selection import UniformReplay
+
+    seen = []
+
+    class Spy(UniformReplay):
+        name = "spy2"
+
+        def rank(self, candidates, ctx, rng):
+            seen.append(ctx.current_loss)
+            return super().rank(candidates, ctx, rng)
+
+    run_stream(World(SMALL, 0), Spy())
+    assert seen and all(c is None for c in seen)

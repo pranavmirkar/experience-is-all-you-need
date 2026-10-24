@@ -276,6 +276,21 @@ class Learner:
             self.update_tokens += e.tokens
         self.update_steps += 1
 
+    def observed_loss(self, e: Episode, step: int) -> float:
+        """Loss of ``e`` under the current model, as a forward pass would report it.
+
+        Assumption (hand-set, flagged in the protocol): loss scales with the family's
+        remaining headroom, so it falls as the family is learned and rises when it is
+        forgotten. Noise is deterministic per (seed, step, episode), so repeated calls
+        within a step agree. Not privileged: a real system can compute this by scoring
+        the stored episode with the current weights.
+        """
+        g = self._fam_idx[e.family]
+        s0 = self.world.base_skill[g]
+        rel = (1.0 - self.skills[g]) / (1.0 - s0)
+        noise = random.Random(f"loss:{self.world.seed}:{step}:{e.episode_id}").gauss(0.0, 0.05)
+        return min(1.0, max(0.0, (e.loss or 0.0) * rel + noise))
+
     def counterfactual(self, batch: Sequence[Episode]):
         """Skills that one step on ``batch`` would give, without changing this learner.
 

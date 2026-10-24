@@ -97,6 +97,38 @@ problems, not VTAR.
   measured-gain selection. Only selectors with `needs_counterfactual` receive the hook (tested). It must not
   be used as an H1 comparator; it shows how much headroom a perfect proxy has.
 
+## Loss-priority variants and staleness (added after the literature pass)
+
+The original `loss` baseline ranks by the loss logged when an episode arrived and never updates it. FreshPER
+(Ma et al. 2026) reports that such stale priorities hurt LLM replay. Three variants were added:
+
+- `loss_fresh`: re-scores every candidate with the current model each step (greedy by current loss). No
+  staleness; costs one forward pass per candidate per step.
+- `loss_per`: PER-style. Priority starts as the logged loss and is overwritten with the current loss each time
+  the episode is trained on (free, since the training pass computes it). Sampling is weighted without
+  replacement with weight priority^0.6.
+- `loss_per_decay`: the same, with the weight multiplied by exp(-age / 12), age being optimiser steps since the
+  priority was last measured. This is FreshPER's decay; tau = 12 steps (two phases) and alpha = 0.6 are hand-set
+  and untuned.
+
+Simulator assumption: the current loss of an episode is `logged_loss * (1 - skill) / (1 - base_skill)` plus
+N(0, 0.05) noise, deterministic per (seed, step, episode). That is, loss tracks the family's remaining headroom.
+This is what gives refreshed variants their information, so the result below is conditional on it.
+
+Each run now calls `policy.reset()` first (PER state would otherwise leak across runs) and reports
+`scoring_passes`: forward passes spent on scoring, counting current-loss calls and, for VTAR, the dev-probe items
+read each step. Existing policies' results are unchanged (260 rows compared, 0 differ).
+
+Pilot result (5 seeds, synthetic): the original `loss` baseline replays 130 times but only 9 distinct episodes,
+28.8 repeats at most, which is the staleness failure. Refreshing fixes the concentration (`loss_fresh`: 56
+distinct; `loss_per`: 95; `loss_per_decay`: 91; uniform: 81) but none of the loss variants beats uniform replay
+in final test pass rate in any scenario (paired differences from -0.030 to +0.003, at most 4 of 5 seeds above
+zero, in one scenario). Age decay did not beat plain PER (differences -0.014 to -0.005, 0 of 5 seeds above zero
+in three scenarios, 2 of 5 in the fourth), which is within seed noise. I tested one explanation, that decay
+concentrates replay, and it is not supported (decay replays about as many distinct episodes as plain PER); the
+small deficit is unexplained. VTAR and novelty keep their margin over every loss variant. `loss_fresh` costs
+3,332 scoring passes per run, VTAR 2,160, `loss_per` about 117.
+
 ## Stage 2 protocol (specified, not implemented)
 
 These came from the literature pass (`docs/literature_review.md`) and bind any real-model run.

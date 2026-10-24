@@ -42,6 +42,12 @@ class SelectionContext:
     # Privileged simulator hook, set only for selectors with needs_counterfactual:
     # maps extra episodes to the skills a step on (new batch + extra) would give.
     counterfactual: Optional[Callable[[Sequence[Episode]], Sequence[float]]] = None
+    # Global optimiser step index, when each candidate's logged loss was measured
+    # (start of its phase), and a forward-pass loss under the current model. The last
+    # is set only for selectors with needs_current_loss; each call costs one forward pass.
+    step: int = 0
+    arrival_step: Optional[Mapping[str, int]] = None
+    current_loss: Optional[Callable[[Episode], float]] = None
 
 
 def cosine(a: Sequence[float], b: Sequence[float]) -> float:
@@ -59,6 +65,11 @@ class Selector(ABC):
     scope: Scope = "past"
     gate_verified: bool = True
     needs_counterfactual: bool = False  # True only for privileged reference selectors
+    needs_current_loss: bool = False  # True if the selector scores candidates with the current model
+    uses_probe: bool = False  # True if the selector reads the dev probe (counted as scoring passes)
+
+    def reset(self) -> None:
+        """Clear any per-run state. Called by the runner before every run."""
 
     @abstractmethod
     def rank(
@@ -123,6 +134,70 @@ class LossPrioritizedReplay(Selector):
         if any(e.loss is None for e in candidates):
             raise ValueError("loss policy needs a loss on every candidate")
         return sorted(candidates, key=lambda e: (-e.loss, e.episode_id))
+
+
+class FreshLossReplay(Selector):
+    """Highest *current* loss first: every candidate is re-scored each step.
+
+    Removes staleness entirely, at the price of one forward pass per candidate per step.
+    """
+
+    name = "loss_fresh"
+    needs_current_loss = True
+
+    def rank(self, candidates, ctx, rng):
+        if ctx.current_loss is None:
+            raise ValueError("loss_fresh needs ctx.current_loss")
+        scored = {e.episode_id: ctx.current_loss(e) for e in candidates}
+        return sorted(candidates, key=lambda e: (-scored[e.episode_id], e.episode_id))
+
+
+class PrioritizedLossReplay(Selector):
+    """PER-style loss replay with priorities that are only refreshed when replayed.
+
+    Priority starts as the logged loss (measured when the episode arrived) and is
+    overwritten with the current loss each time the episode is actually trained on.
+    Sampling is weighted without replacement, weight = priority ** alpha. With
+    ``tau`` set, the weight is also multiplied by exp(-age / tau), age being the
+    optimiser steps since the priority was last measured (FreshPER, Ma et al. 2026).
+    Without decay, high priorities measured long ago keep dominating sampling.
+    """
+
+    needs_current_loss = True
+
+    def __init__(self, name: str, tau: Optional[float] = None, alpha: float = 0.6, floor: float = 1e-3):
+        self.name = name
+        self.tau = tau
+        self.alpha = alpha
+        self.floor = floor
+        self._prio: dict[str, tuple[float, int]] = {}
+
+    def reset(self) -> None:
+        self._prio = {}
+
+    def weight(self, e: Episode, ctx: SelectionContext) -> float:
+        if e.loss is None:
+            raise ValueError("loss policy needs a loss on every candidate")
+        arrival = (ctx.arrival_step or {}).get(e.episode_id, 0)
+        p, measured_at = self._prio.get(e.episode_id, (e.loss, arrival))
+        w = max(p, self.floor) ** self.alpha
+        if self.tau is not None:
+            w *= math.exp(-(ctx.step - measured_at) / self.tau)
+        return max(w, 1e-12)
+
+    def rank(self, candidates, ctx, rng):
+        keyed = [(rng.random() ** (1.0 / self.weight(e, ctx)), e.episode_id, e) for e in candidates]
+        keyed.sort(key=lambda t: (-t[0], t[1]))
+        return [e for _, _, e in keyed]
+
+    def select(self, candidates, budget_tokens, ctx, rng):
+        assert_trainable(candidates)  # leakage check first, whatever else is missing
+        if ctx.current_loss is None:
+            raise ValueError(f"{self.name} needs ctx.current_loss")
+        chosen = super().select(candidates, budget_tokens, ctx, rng)
+        for e in chosen:  # the training forward pass refreshes the priority for free
+            self._prio[e.episode_id] = (ctx.current_loss(e), ctx.step)
+        return chosen
 
 
 class NoveltyReplay(Selector):
@@ -249,6 +324,8 @@ class VTARSelector(Selector):
     C      tokens / median tokens of the candidates
     """
 
+    uses_probe = True
+
     def __init__(self, config: VTARConfig = VTARConfig(), name: str = "vtar"):
         self.config = config
         self.name = name
@@ -321,6 +398,9 @@ def build_policies(vtar: VTARConfig = VTARConfig()) -> dict[str, Selector]:
         SequentialFineTune(),
         UniformReplay(),
         LossPrioritizedReplay(),
+        FreshLossReplay(),
+        PrioritizedLossReplay("loss_per"),
+        PrioritizedLossReplay("loss_per_decay", tau=12.0),
         NoveltyReplay(),
         CodeItPriorityReplay(),
         VTARSelector(vtar, "vtar"),

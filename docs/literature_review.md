@@ -234,8 +234,8 @@ public link found, not of no code.
 stored priorities, and that an age decay exp(-age/tau) removes the problem. Its comparison has on-policy, standard
 PER and FreshPER arms but no uniform-replay arm, and the common settings list a single seed (42). My `loss`
 baseline ranks by a loss logged when the episode was generated, so it is exposed to the same staleness, while
-VTAR's L term refreshes from the probe each step. This is a baseline-fairness issue; a refreshed-loss variant
-is added to the Stage 2 protocol. The GRPO paper (51) bounds staleness by evicting old rollouts.
+VTAR's L term refreshes from the probe each step. This is a baseline-fairness issue; refreshed-loss and age-decayed variants
+was added to the simulator (`loss_fresh`, `loss_per`, `loss_per_decay`); see the protocol for the pilot result. The GRPO paper (51) bounds staleness by evicting old rollouts.
 
 **Verification and sealed checks (42, 45).** SEAL's setting is self-modifying agents, not coding, but its result
 supports the brief's rule: when the agent controls both the thing being optimised and the check, the check

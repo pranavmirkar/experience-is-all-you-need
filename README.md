@@ -28,7 +28,7 @@ reruns; only timestamps differ.
 
 - `src/experience_learning/schemas.py` episode records; "verified" requires an external method
 - `buffer.py` TRAIN-only reservoir buffer with verification gate; `LeakageError`
-- `selection.py` frozen, sequential, uniform, loss, novelty, CodeIt-style priority (adaptation), VTAR and ablations, and `oracle_gain` (privileged reference, simulator only)
+- `selection.py` frozen, sequential, uniform, loss (stale), loss_fresh, loss_per, loss_per_decay, novelty, CodeIt-style priority (adaptation), VTAR and ablations, and `oracle_gain` (privileged reference, simulator only)
 - `metrics.py` accuracy, forgetting, forward transfer, regression rate
 - `simulator.py` seeded world, hidden dynamics, locked final test set
 - `evaluation.py` sequential runner and experiment grid

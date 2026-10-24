@@ -15,8 +15,8 @@ from experience_learning.selection import (
 from helpers import make_episode
 
 
-def ctx(probe=(), centroid=None, counts=None):
-    return SelectionContext(0, tuple(probe), centroid, counts or {})
+def ctx(probe=(), centroid=None, counts=None, step=0, current_loss=lambda e: e.loss, arrival=None):
+    return SelectionContext(0, tuple(probe), centroid, counts or {}, None, step, arrival or {}, current_loss)
 
 
 def pool(n=20):
@@ -150,3 +150,50 @@ def test_codeit_priority_samples_high_priority_more_often():
         sum(e.family == "A" for e in sel.select(good + bad, 200, ctx(), random.Random(s))) for s in range(200)
     )
     assert wins > 2 * (200 * 2 - wins)  # far more A than B among 2 picks per call
+
+
+def test_loss_fresh_ranks_by_current_not_logged_loss():
+    cands = [make_episode("a", loss=0.9), make_episode("b", loss=0.1), make_episode("c", loss=0.5)]
+    now = {"a": 0.05, "b": 0.8, "c": 0.4}
+    chosen = build_policies()["loss_fresh"].select(
+        cands, 10_000, ctx(current_loss=lambda e: now[e.episode_id]), random.Random(0)
+    )
+    assert [e.episode_id for e in chosen] == ["b", "c", "a"]
+
+
+def test_per_refreshes_priority_of_replayed_episodes_only():
+    from experience_learning.selection import PrioritizedLossReplay
+
+    sel = PrioritizedLossReplay("t")
+    a, b = make_episode("a", loss=0.9, tokens=100), make_episode("b", loss=0.9, tokens=100)
+    # budget fits exactly one; find which is chosen, its priority must be overwritten
+    chosen = sel.select([a, b], 100, ctx(step=5, current_loss=lambda e: 0.2), random.Random(1))
+    assert len(chosen) == 1
+    other = b if chosen[0] is a else a
+    assert sel._prio[chosen[0].episode_id] == (0.2, 5)
+    assert other.episode_id not in sel._prio
+    sel.reset()
+    assert sel._prio == {}
+
+
+def test_age_decay_demotes_stale_priorities_but_plain_per_does_not():
+    from experience_learning.selection import PrioritizedLossReplay
+
+    fresh = make_episode("fresh", loss=0.3)
+    stale = make_episode("stale", loss=0.9)  # high but measured long ago
+    c = ctx(step=40, arrival={"stale": 0, "fresh": 40})
+    decay = PrioritizedLossReplay("d", tau=5.0)
+    plain = PrioritizedLossReplay("p")
+    assert decay.weight(stale, c) < decay.weight(fresh, c)
+    assert plain.weight(stale, c) > plain.weight(fresh, c)
+
+
+def test_per_variants_are_reproducible_across_runs_because_state_is_reset():
+    from experience_learning.simulator import World, WorldConfig
+    from experience_learning.evaluation import run_stream
+
+    small = WorldConfig(episodes_per_phase=30, steps_per_phase=4, n_stream_eval=40, n_final_test=40, n_probe=5)
+    pol = build_policies()["loss_per_decay"]
+    w = World(small, 0)
+    a, b = run_stream(w, pol), run_stream(w, pol)
+    assert a["trained_ids"] == b["trained_ids"] and a["R"] == b["R"]

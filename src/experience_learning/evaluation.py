@@ -45,6 +45,10 @@ def run_stream(world: World, policy: Selector, hook: Optional[SelectHook] = None
     gate = policy.gate_verified
     buffer = ExperienceBuffer(cfg.buffer_capacity, gate, random.Random(f"admission:{seed}"))
     replay_counts: dict[str, int] = defaultdict(int)
+    policy.reset()
+    arrival_step: dict[str, int] = {}
+    scoring_passes = 0
+    gstep = 0
 
     def eval_row() -> tuple[list[float], list[list[bool]]]:
         flags = world.stream_eval(learner.skills)
@@ -58,12 +62,25 @@ def run_stream(world: World, policy: Selector, hook: Optional[SelectHook] = None
     for p, episodes in enumerate(world.stream):
         pool = [e for e in episodes if e.verified or not gate]
         phase_start = episodes[0].stream_index
+        for e in episodes:
+            arrival_step[e.episode_id] = gstep
         if policy.scope != "none":
             centroid = _centroid([e.embedding for e in episodes])
             for step in range(cfg.steps_per_phase):
                 new = _sample_to_budget(pool, cfg.new_tokens_per_step, random.Random(f"batch:{seed}:{p}:{step}"))
                 cf = learner.counterfactual(new) if policy.needs_counterfactual else None
-                ctx = SelectionContext(p, world.probe(learner.skills), centroid, dict(replay_counts), cf)
+                cl = None
+                if policy.needs_current_loss:
+
+                    def cl(e, _step=gstep):
+                        nonlocal scoring_passes
+                        scoring_passes += 1
+                        return learner.observed_loss(e, _step)
+
+                probe = world.probe(learner.skills)
+                if policy.uses_probe:
+                    scoring_passes += len(probe)
+                ctx = SelectionContext(p, probe, centroid, dict(replay_counts), cf, gstep, arrival_step, cl)
                 if policy.scope == "past":
                     candidates = buffer.eligible(phase_start)
                 else:
@@ -78,6 +95,7 @@ def run_stream(world: World, policy: Selector, hook: Optional[SelectHook] = None
                     for e in chosen:
                         replay_counts[e.family] += 1
                 learner.step(new + chosen)
+                gstep += 1
         for e in episodes:
             buffer.add(e)
         row, flags = eval_row()
@@ -103,6 +121,7 @@ def run_stream(world: World, policy: Selector, hook: Optional[SelectHook] = None
         "regression_rate": reg_broken / reg_prior if reg_prior else 0.0,
         "update_tokens": learner.update_tokens,
         "update_steps": learner.update_steps,
+        "scoring_passes": scoring_passes,
         "buffer_size": len(buffer),
         "rejected_unverified": buffer.rejected_unverified,
         "trained_ids": learner.trained_ids,
@@ -119,6 +138,7 @@ SCALAR_METRICS = (
     "regression_rate",
     "update_tokens",
     "update_steps",
+    "scoring_passes",
 )
 
 
