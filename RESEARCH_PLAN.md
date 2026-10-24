@@ -32,7 +32,7 @@ gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), 
 
 1. Done in Stage 2 so far: sandboxed executor and a 30-template task bank (`docs/stage2_plan.md`).
 2. Done: smoke test on Qwen2.5-Coder-0.5B (results in `docs/stage2_plan.md` section 6; 10 tok/s, LoRA step under 1 s, base dev full-pass 2 of 14).
-3. Gate 2 (benchmark discriminates) is not yet established: five of six families at 0% full-pass on a thin dev set. Next: pass@8 dev diagnostic, more templates, realistic LoRA timing.
+3. Gate 2 (benchmark discriminates) partly supported: sampled dev pass@1 0.107, pass@8 0.357; 3 of 7 dev templates never solved. Next: more templates (pre-declared drop rule), realistic LoRA timing, plumbing dry run.
 4. Paired-variance pilot on dev tasks before pre-registering the H1 margin.
 5. Literature: remaining open items are listed in `docs/literature_review.md` (53 entries beyond the brief).
 
