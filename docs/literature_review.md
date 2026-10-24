@@ -1,6 +1,6 @@
 # Literature matrix
 
-Status 2026-10-24: **second pass.** 11 brief papers read, plus 10 further papers found by search and read.
+Status 2026-10-24: **third pass.** 11 brief papers read, plus 15 further papers found by search (10 read in full sections, 5 skimmed or read for selection details only; marked).
 This is still not a systematic review (search log and open items at the end). Gap statements are
 provisional and marked as such.
 
@@ -50,7 +50,26 @@ DualSFT v2 (22 Oct 2026, "Accepted by NeurIPS 2026" per arXiv page). SWE-Bench-C
 | 20 | FOREVER (Feng 2026, 2601.03938v2, ACL 2026) | when to replay | schedule driven by optimiser update size; 2% of each task stored | Yes (LoRA) | 3 NLP CL benchmarks; Qwen3-0.6B, 4B | 3 runs / several task orders | yes (link in PDF) |
 | 21 | Forgetting in LMs (Marek 2026, 2605.26097) | replay without stored data | KL penalty on model-generated samples nearly removes forgetting; capacity limits it | Yes | pretrained small LMs; Llama-3.2-1B-Instruct on Verilog | not checked | yes (github.com/martin-marek/forgetting) |
 
+### B2. Replay and continual-learning papers added in the third pass
+
+| # | Work | What it does | Weights change? | Test setup | Seeds / variance | Code |
+|---|---|---|---|---|---|---|
+| 22 | SuRe (Hazard 2025, 2511.22367v1) | replay buffer keeps the highest-NLL sequences with an equal per-task quota (Eq. 4); optional dual fast/slow LoRA | Yes (LoRA, T5) | Standard CL (4 text-classification sets) and 15-task LNT; buffer = 2% of data | means over 3 runs x 3 task orders (Tab. 4-5) | not checked |
+| 23 | REPEAT (Gao 2023, ICSE, 2302.03482) | exemplars: keep the lowest-loss candidates, then pick diverse ones by TF-IDF clustering; plus adaptive parameter regularisation | Yes (CodeBERT, CodeT5) | code summarisation, vulnerability detection, clone detection; vs random exemplars (EMR) and EWC | not checked | not checked |
+| 24 | InsCL (Wang 2024, NAACL, 2403.11435) | replay amount per earlier task by Wasserstein task similarity, data picked by an instruction-information score | Yes (LLaMA-7B) | 16 tasks, several orders; +3.0 relative gain over random replay, +27.96 over no replay (abstract) | 3 training orders averaged | not checked |
+| 25 | CodeTask-CL (Yadav 2023, 2307.02435) | benchmark for continual learning on code generation/translation/summarisation/refinement; compares CL methods | Yes | CodeT5 + experience replay is a strong baseline; prompt pooling forgets; PP-TF fixes it | not checked | yes (github.com/amazon-science/codetask-cl-pptf) |
+| 26 | GrADS (Liu 2025, 2511.08620v1) *(skimmed)* | gradient-magnitude data selection for domain SFT, with a forgetting claim | Yes | CMedQA, LawQA, FinQA; Qwen/ChatGLM/Llama; baselines Random, LESS, others | not checked | not checked |
+
 ## Notes that matter for VTAR
+
+**SuRe (22), REPEAT (23).** They pull in opposite directions on loss. SuRe replays the *highest*-loss
+sequences and beats reservoir replay on the 15-task benchmark (72.1 vs 69.1, Tab. 1). REPEAT filters to the
+*lowest*-loss candidates before picking diverse ones, to avoid noisy samples. So a loss-prioritised baseline
+can go either way, and both directions belong in Stage 2. SuRe's own ablation also shows that a
+task-balanced random buffer updated after each task is close behind surprise: at replay ratio 1:2, 73.35
+(random, after) vs 74.22 (surprise, after) (Tab. 5). Much of the gain over reservoir replay therefore comes
+from balancing and timing, which my `novelty` baseline and the shared reservoir buffer partly reflect.
+Neither paper has a held-out task family or code agents.
 
 **CodeIt (3).** Priority is the matched fraction of demo outputs, success-based, with no transfer,
 interference or cost term. Ablation A3 (uniform): policy-only 38/400 vs 49/400, cumulative 58 vs 59 (Tab. 2),
@@ -103,6 +122,10 @@ on MBPP (Tab. 2) and its loop is per-task retry. Voyager's self-verification is 
 important component (-73% items, §3.4). Zhao shows intervention controls (empty/shuffle/irrelevant/
 corrupt/filler) for frozen agents; the weight-update analogue is mine.
 
+**CodeTask-CL (25), InsCL (24).** Show that replay with random exemplars is already a strong default for
+code models (CodeT5 + ER) and that smarter allocation across earlier tasks (InsCL) adds a few points over
+random replay in instruction tuning. Both use fixed task sequences, not verified agent experience.
+
 **Liu (7).** Position paper; "what to learn" as planning; no experiments.
 
 **GSE (9).** Retention gate by replaying relevant historical cases before accepting an update.
@@ -119,16 +142,19 @@ replay-helps data point.
 2. **Measured utility is common; proxies are the novelty-poor part.** Measuring marginal gain on held-out
    items appears in AuPair, CODESKILL, SPEE, (13), DualSFT, MIR. A cosine-similarity proxy is a weaker
    version of these.
-3. **Narrowest candidate gap (unconfirmed).** Equal-budget comparison of transfer- and interference-aware
+3. **Continual learning for code models exists** (CodeTask-CL, REPEAT, API-evolution streams), with
+   replay baselines, but on fixed task sequences for encoder or seq2seq models, not selection of verified
+   agent experience.
+4. **Narrowest candidate gap (unconfirmed).** Equal-budget comparison of transfer- and interference-aware
    *selection of verified coding experience for weight updates in a stream*, against uniform, loss-,
    novelty- and CodeIt-style replay, with forgetting and held-out-family transfer reported. I did not find
-   this in 21 papers, but the search is limited (see log).
-4. **Variance.** Most papers do not state seeds. Where stated: 3 (CodeIt, Voyager, DualSFT, FOREVER),
+   this in 26 papers, but the search is limited (see log).
+5. **Variance.** Most papers do not state seeds. Where stated: 3 (CodeIt, Voyager, DualSFT, FOREVER),
    5 (13, CL-Bench), 15-20 (MIR). SSR reports ~2% evaluation noise; (13) shows large trial-to-trial spread.
    The 3-point H1 margin remains untested.
-5. **Verification.** Model-judged checks: Reflexion tests, Voyager critic, CODESKILL alignment judge,
+6. **Verification.** Model-judged checks: Reflexion tests, Voyager critic, CODESKILL alignment judge,
    SWE-Exp rerank. External: SWE-Exp, SSR, AuPair, GSE, CodeIt, PPER (tests), SPEE (reward).
-6. **Leakage handling differs** (repo/time exclusion in SWE-Exp; provenance filter over a shared test pool
+7. **Leakage handling differs** (repo/time exclusion in SWE-Exp; provenance filter over a shared test pool
    in CODESKILL; held-out project in GSE; PPER unclear). The harness split rules are stricter.
 
 ## Plan changes: status
@@ -147,15 +173,22 @@ replay-helps data point.
 
 Queries run (standard unless noted): continual learning coding agents replay selection benchmark;
 learning which experiences to replay / influence-based selection for code; MIR; RHO-LOSS; LESS;
-replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning Bench; SPEE.
-Results used as leads only; every paper listed in section B was downloaded and read.
+replay data selection for LLM fine-tuning (extended); Snorkel Continual Learning Bench; SPEE;
+gradient-based replay selection in continual instruction tuning; continual learning for code models
+(API evolution); data valuation / influence for self-generated samples; forward/backward transfer
+prediction and task-order selection.
+Results used as leads only; every paper in sections A, B and B2 was downloaded and read (GrADS skimmed).
+The data-valuation and self-improvement-selection query returned no coding-specific method; weak evidence
+of absence only.
 
 ## Open items
 
-1. Searches not yet done: gradient/influence-based replay selection in continual *instruction tuning*;
-   curriculum or learnability selection for code RL beyond SSR; data-valuation (Shapley, influence
-   functions) for LLM fine-tuning; continual learning for code models (e.g. library/API evolution);
-   forward/backward-transfer estimation methods. Cited-by search on CodeIt, AuPair, DualSFT, SWE-Exp.
+1. Unread leads: HESIT (gradient-based replay selection, known only second-hand); the API-evolution
+   continual-learning stream for code models (name not confirmed); "The Geometry of Sequential Learning:
+   Lie-Bracket Prediction of Transfer Order" (ICML 2026; predicts whether order A then B or B then A gives
+   lower target loss, reported 81-94% sign accuracy across four LLMs; second-hand); HCTOS task-order
+   selection; data-valuation methods (DataInf, LoGra, For-Value). Searches still not done: curriculum or
+   learnability selection for code RL beyond SSR; cited-by search on CodeIt, AuPair, DualSFT, SWE-Exp.
 2. Appendices: PPER alpha tuning (does it use test data?), CODESKILL and GSE seeds, DualSFT code link,
    SWE-Exp extraction prompts (gold-patch use).
 3. Check released code for papers marked "no link found" (author pages, PMLR/OpenReview supplements).
