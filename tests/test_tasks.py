@@ -1,5 +1,6 @@
 import json
 import random
+from pathlib import Path
 from collections import defaultdict
 
 import pytest
@@ -14,8 +15,18 @@ needs_sandbox = pytest.mark.skipif(not sb.detect_isolation().strong, reason="str
 
 
 def test_inventory():
-    assert len(ALL) == 30
-    assert all(len(T.templates_of(f)) == 5 for f in T.STREAM_FAMILIES + T.HELDOUT_FAMILIES)
+    assert len(ALL) == 52
+    assert all(len(T.templates_of(f, 1)) == 5 for f in T.STREAM_FAMILIES + T.HELDOUT_FAMILIES)
+    assert all(len(T.templates_of(f, 2)) == 4 for f in T.STREAM_FAMILIES)
+    assert all(len(T.templates_of(f, 2)) == 2 for f in T.HELDOUT_FAMILIES)
+
+
+@pytest.mark.parametrize("seed", [0, 1, 7])
+def test_vintage1_split_assignment_is_frozen(seed):
+    """Adding templates must not move any original template between splits (dev results were already seen)."""
+    golden = json.loads((Path(__file__).parent / "data" / "stage2_v1_splits.json").read_text())[str(seed)]
+    now = {f"{f}/{n}": s.value for (f, n), s in T.assign_splits(seed).items() if T._VINTAGE[(f, n)] == 1}
+    assert now == golden
 
 
 @pytest.mark.parametrize("seed", [0, 1, 7])
@@ -27,9 +38,12 @@ def test_splits_are_by_template_and_cover_the_roles(seed):
     assert all(len(s) == 1 for s in by_template.values())  # no template straddles splits
     for fam in T.STREAM_FAMILIES:
         roles = sorted(s.value for (f, _), s in bank.splits.items() if f == fam)
-        assert roles == ["dev", "final_test", "train", "train", "train"]
+        assert roles == ["dev"] * 2 + ["final_test"] * 2 + ["train"] * 5
+        for vintage, n_train in ((1, 3), (2, 2)):  # each vintage covers every role
+            v = sorted(s.value for (f, n), s in bank.splits.items() if f == fam and T._VINTAGE[(f, n)] == vintage)
+            assert v.count("train") == n_train and v.count("dev") == 1 and v.count("final_test") == 1
     held = [s for (f, _), s in bank.splits.items() if f in T.HELDOUT_FAMILIES]
-    assert Split.TRAIN not in held and held.count(Split.FINAL_TEST) == 3
+    assert Split.TRAIN not in held and held.count(Split.FINAL_TEST) == 4 and held.count(Split.DEV) == 3
 
 
 def test_split_assignment_depends_on_seed_but_is_reproducible():
@@ -63,3 +77,15 @@ def test_reference_passes_and_trivial_wrong_answers_fail(fam, name):
     assert C.verify(t, t.reference_source).passed
     assert not C.verify(t, "def solve(*a):\n    return None").passed
     assert not C.verify(t, "def solve(*a):\n    return 0").passed
+
+
+@pytest.mark.parametrize("fam,name", ALL)
+def test_no_constant_answer_scores_well_on_average(fam, name):
+    """A constant candidate must not pass most tests, or partial credit would reward doing nothing."""
+    from collections import Counter
+
+    shares = []
+    for i in range(10):
+        t = T.build_task(fam, name, i, 0, Split.TRAIN)
+        shares.append(Counter(json.dumps(c.expected, sort_keys=True) for c in t.tests).most_common(1)[0][1] / len(t.tests))
+    assert sum(shares) / len(shares) <= 0.55

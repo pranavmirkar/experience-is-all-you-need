@@ -69,11 +69,20 @@ class Spec:
 
 
 _TEMPLATES: dict[str, dict[str, Callable[[random.Random], Spec]]] = {}
+_VINTAGE: dict[tuple[str, str], int] = {}
 
 
-def template(family: str, name: str):
+def template(family: str, name: str, vintage: int = 1):
+    """Register a template. ``vintage`` is the bank version that introduced it.
+
+    Splits of an older vintage never change when a newer vintage is added: each vintage is
+    shuffled and assigned on its own (see ``assign_splits``). Without this, adding templates
+    would silently move templates already seen in dev between splits.
+    """
+
     def deco(fn):
         _TEMPLATES.setdefault(family, {})[name] = fn
+        _VINTAGE[(family, name)] = vintage
         return fn
 
     return deco
@@ -462,12 +471,20 @@ def build_task(family: str, name: str, index: int, seed: int, split: Split) -> T
     tests: list[CheckCase] = []
     gen_rng = random.Random(f"tests:{seed}:{family}:{name}:{index}")
 
-    def add(args: list) -> bool:
+    freq: dict[str, int] = {}
+    cap = N_TESTS // 2  # no single expected value may fill more than half of the tests (edge cases excepted)
+
+    def add(args: list, capped: bool = True) -> bool:
         key = json.dumps(args, sort_keys=True)
         if key in seen:
             return False
+        expected = _json_norm(ref(*_json_norm(args)))
+        ekey = json.dumps(expected, sort_keys=True)
+        if capped and freq.get(ekey, 0) >= cap:
+            return False
         seen.add(key)
-        tests.append(CheckCase(tuple(_json_norm(args)), _json_norm(ref(*_json_norm(args)))))
+        freq[ekey] = freq.get(ekey, 0) + 1
+        tests.append(CheckCase(tuple(_json_norm(args)), expected))
         return True
 
     # visible examples first: prefer non-edge inputs so the prompt shows typical cases
@@ -477,7 +494,7 @@ def build_task(family: str, name: str, index: int, seed: int, split: Split) -> T
         attempts += 1
     for e in spec.edges:
         if len(tests) < N_TESTS:
-            add(list(e))
+            add(list(e), capped=False)
     while len(tests) < N_TESTS and attempts < 2000:
         add(spec.gen(gen_rng))
         attempts += 1
@@ -488,23 +505,34 @@ def build_task(family: str, name: str, index: int, seed: int, split: Split) -> T
     return Task(f"{split.value}/{family}/{name}/{index:04d}", family, name, split, prompt, spec.reference, tuple(tests))
 
 
-def templates_of(family: str) -> list[str]:
-    return sorted(_TEMPLATES[family])
+def templates_of(family: str, vintage: Optional[int] = None) -> list[str]:
+    return sorted(n for n in _TEMPLATES[family] if vintage is None or _VINTAGE[(family, n)] == vintage)
+
+
+# Roles per vintage. Vintage 1: the original 30 templates (assignment frozen, pinned by a test).
+# Vintage 2 adds four templates to each stream family and two to the held-out family.
+_ROLES = {
+    1: {"stream": [Split.TRAIN] * 3 + [Split.DEV, Split.FINAL_TEST], "heldout": [Split.DEV] * 2 + [Split.FINAL_TEST] * 3},
+    2: {"stream": [Split.TRAIN] * 2 + [Split.DEV, Split.FINAL_TEST], "heldout": [Split.DEV, Split.FINAL_TEST]},
+}
 
 
 def assign_splits(seed: int) -> dict[tuple[str, str], Split]:
-    """Template-level split. Every stream family: 3 train, 1 dev, 1 test. Held-out family: 2 dev, 3 test."""
+    """Template-level split, assigned separately for each vintage.
+
+    Vintage 1 keeps its original shuffle key (``split:{seed}:{fam}``) so its assignment is unchanged.
+    """
     out: dict[tuple[str, str], Split] = {}
-    for fam in STREAM_FAMILIES:
-        names = templates_of(fam)
-        random.Random(f"split:{seed}:{fam}").shuffle(names)
-        roles = [Split.TRAIN] * 3 + [Split.DEV, Split.FINAL_TEST]
-        out.update({(fam, n): s for n, s in zip(names, roles)})
-    for fam in HELDOUT_FAMILIES:
-        names = templates_of(fam)
-        random.Random(f"split:{seed}:{fam}").shuffle(names)
-        roles = [Split.DEV] * 2 + [Split.FINAL_TEST] * 3
-        out.update({(fam, n): s for n, s in zip(names, roles)})
+    for vintage, roles in _ROLES.items():
+        key = "split" if vintage == 1 else f"split{vintage}"
+        for kind, families in (("stream", STREAM_FAMILIES), ("heldout", HELDOUT_FAMILIES)):
+            for fam in families:
+                names = templates_of(fam, vintage)
+                if not names:
+                    continue
+                random.Random(f"{key}:{seed}:{fam}").shuffle(names)
+                assert len(names) == len(roles[kind]), (fam, vintage, len(names))
+                out.update({(fam, n): sp for n, sp in zip(names, roles[kind])})
     return out
 
 
@@ -524,3 +552,6 @@ class TaskBank:
             for i in range(offset, offset + n_per_template):
                 out.append(build_task(fam, name, i, self.seed, split))
         return out
+
+
+from . import templates_v2  # noqa: E402,F401  (registers the vintage-2 templates)

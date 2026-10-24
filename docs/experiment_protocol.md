@@ -129,7 +129,7 @@ concentrates replay, and it is not supported (decay replays about as many distin
 small deficit is unexplained. VTAR and novelty keep their margin over every loss variant. `loss_fresh` costs
 3,332 scoring passes per run, VTAR 2,160, `loss_per` about 117.
 
-## Stage 2 protocol (specified, not implemented)
+## Stage 2 protocol (specified; sandbox, task bank and smoke test implemented, no policy run yet)
 
 These came from the literature pass (`docs/literature_review.md`) and bind any real-model run.
 
@@ -194,6 +194,38 @@ fragile inside the first-order validity window.
 Measurement noise: AuPair-style and probe-based utilities are noisy for small probes (trial-to-trial spread
 is large in Sarukkai et al., Fig. 1). Size the probe from the pilot SE and report the estimator's rank
 correlation with realised gain before using it to select.
+
+## Stage 2 task bank: revision log (bank v2)
+
+Written before the model was run on any new template or on the rebalanced tests.
+
+1. **New templates (vintage 2).** 22 templates added: 4 per stream family and 2 in the held-out family
+   (`parsing`). Bank is now 52 templates. Vintage-2 splits use their own shuffle key (`split2:...`) with roles
+   train, train, dev, final_test per stream family and dev, final_test for `parsing`.
+2. **Vintage-1 split assignment is frozen.** Splits are assigned per vintage, so adding templates cannot move
+   a template that was already seen in dev between splits. `tests/data/stage2_v1_splits.json` pins the
+   assignment for seeds 0, 1 and 7 and a test checks it.
+3. **Answer-balance cap (changes vintage-1 test content).** A constant-answer check on the original bank
+   showed `parsing/brackets` giving the same answer on about 90% of tests, `strings/loose_palindrome` on 72%,
+   `math/gcd_offset` on 62%. Generated tests now may not give any single expected value to more than 6 of 12
+   tests (hand-written edge cases excepted). This alters the tests of nearly all vintage-1 templates, not
+   only those three (the cap binds by chance for common answers such as 0). Prompts and template parameters
+   are unchanged. Consequence: **the smoke test and the first dev sampling diagnostic were run on the old tests
+   and are not comparable with later numbers.** Also, those runs' "mean test fraction" was inflated for
+   boolean-valued templates; a constant "False" would have scored about 0.9 on brackets. Full-pass rates were not
+   affected by this particular flaw, because passing needs every test.
+4. **Possible bias in the new templates.** I wrote them after seeing the dev failures of `merge_filter`,
+   `digit_root_base` and `kv_parse` (multi-condition specs). That could push me toward easier specs. I aimed for a
+   spread from one-rule to multi-condition specs and did not look at any model output on the new templates
+   before finishing them. Whether the spread worked is measured later, not assumed.
+5. **Drop rule, declared before measuring.** A dev template whose base model (T=0.8) never fully passes any of
+   16 samples (2 instances x 8) is flagged "not informative for this model". Flagged templates are reported and
+   excluded from policy comparison only by a logged decision. Nothing is dropped from train or final_test on
+   the basis of base-model results, and no final_test template is run against any model before the locked
+   evaluation.
+6. **Known remaining weaknesses.** Several vintage-2 templates have a single description (parameterless), so
+   their instances differ only in test content. `parsing/version_compare` has only three possible outputs, so a
+   constant answer can pass up to half the tests. Token counts are still chars/4.
 
 ## Scenarios
 

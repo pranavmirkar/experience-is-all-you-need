@@ -47,36 +47,40 @@ lines, `os._exit`, syntax error, unserialisable return value. All were contained
 Limits: this is not a defence against kernel exploits. It is process-level isolation suitable
 for small, untrusted function-level snippets, not for hostile actors with kernel exploits.
 
-## 3. Task bank and split rules (implemented)
+## 3. Task bank and split rules (implemented; bank v2)
 
-`src/experience_learning/stage2/tasks.py`, `collect.py`.
+`src/experience_learning/stage2/tasks.py`, `templates_v2.py`, `collect.py`.
 
-- 30 templates in 6 families. Stream families: strings, lists, dicts, math, dp (5 templates each).
-  Held-out family: `parsing` (5 templates, never trained on, used to test transfer to an unseen family).
+- 52 templates in 6 families: 5 stream families (strings, lists, dicts, math, dp) with 9 templates each,
+  and the held-out family `parsing` with 7. Vintage 1 is the original 30; vintage 2 added 22.
 - Each template generates instances from a seed. Each instance has 12 tests: 3 visible in the prompt,
-  9 hidden.
-- Splits are assigned per template, not per instance, so near-duplicate instances cannot straddle
-  train and test. For seed 0: train 15, dev 7, final_test 8 templates. Stream families have
-  3 train / 1 dev / 1 final-test templates; `parsing` has 2 dev / 3 final-test / 0 train.
-- A reference solution exists per template and passes all of its own tests through the sandbox
-  (checked by the self-check). A constant-`None` candidate is rejected.
+  9 hidden. No single expected value may fill more than 6 of the 12 (hand-written edge cases excepted).
+- Splits are assigned per template, never per instance, and per vintage, so adding templates cannot move
+  one that was already seen in dev (pinned by `tests/data/stage2_v1_splits.json`). Seed 0 totals:
+  25 train, 13 dev, 14 final_test templates. Each stream family has 5 train / 2 dev / 2 final-test;
+  `parsing` has 0 train / 3 dev / 4 final-test.
+- Every reference solution passes its own tests through the sandbox (self-check). Constant-`None` and
+  constant-`0` candidates are rejected, and a test asserts no constant answer averages more than 55% of tests.
 - `collect_episode` produces an `Episode`. It is `verified` only if the solution it relies on
   passed every test in the sandbox. Otherwise it carries `Verification(False, "model_assertion")`,
   which the TRAIN buffer's gate rejects.
+- Revision log, bias disclosure and the pre-declared drop rule are in `docs/experiment_protocol.md`
+  ("Stage 2 task bank: revision log").
 
 Known weaknesses:
 
-- The templates are small, hand-written and synthetic-in-spirit. They are not a recognised
-  benchmark. A pass rate here says little about general coding.
-- The task families are a design choice. "Interference between families" is only meaningful if
-  the real model shows measurable cross-family effects, and that is untested.
+- The templates are small and hand-written. They are not a recognised benchmark. A pass rate here says
+  little about general coding.
+- "Interference between families" is only meaningful if the real model shows measurable cross-family
+  effects, and that is untested.
 - Token counts use chars/4 as a placeholder. Real cost accounting needs the model tokenizer.
-- The final-test templates exist but are locked: nothing scores them until the protocol is
-  pre-registered.
+- The final-test templates exist but are locked: nothing scores them until the protocol is pre-registered.
+- The answer-balance cap changed the tests of nearly all vintage-1 templates after the smoke test and the
+  first dev diagnostic were run. Sections 6 and 6b are therefore superseded for comparison purposes by 6c.
 
 ## 4. Tests
 
-`python3 -m pytest -q` runs 177 tests (89 from Stage 1, 88 for Stage 2). Stage 2 tests skip if the
+`python3 -m pytest -q` runs 276 tests (89 from Stage 1, 187 for Stage 2). Stage 2 tests skip if the
 sandbox is not strong. They include a polling test that no sandboxed process outlives its run.
 
 ## 5. Model candidates (metadata from the Hugging Face API; no weights downloaded)
@@ -180,16 +184,53 @@ What it shows:
 - Sampled pass@1 (0.107) is close to the greedy full-pass rate (0.143), but the two are different
   quantities on a handful of tasks.
 
+### 6c. Dev sampling on bank v2 (measured)
+
+Same script and settings as 6b (`--out results/stage2_dev_sampling_bank2`, k=8, T=0.8, seed 0), now on
+all 13 dev templates x 2 instances = 26 tasks, with the rebalanced tests. 659 s wall time.
+Dev only; final_test untouched.
+
+| Template | vintage | pass@1 (of 16) | any pass in 16 | mean test fraction |
+|---|---|---|---|---|
+| strings/case_by_index | 2 | 0.38 | yes | 0.52 |
+| strings/vowel_positions | 1 | 0.19 | yes | 0.43 |
+| lists/second_largest | 1 | 0.06 | yes | 0.48 |
+| dp/subset_sum_count | 2 | 0.06 | yes | 0.31 |
+| parsing/brackets | 1 | 0.06 | yes | 0.42 |
+| dicts/anagram_groups | 2 | 0 | no | 0.21 |
+| dicts/merge_filter | 1 | 0 | no | 0.22 |
+| dp/lis_gap | 1 | 0 | no | 0.17 |
+| lists/unique_keep_last | 2 | 0 | no | 0.26 |
+| math/digit_root_base | 1 | 0 | no | 0.13 |
+| math/fib_prefix_mod | 2 | 0 | no | 0.16 |
+| parsing/kv_parse | 1 | 0 | no | 0.08 |
+| parsing/version_compare | 2 | 0 | no | 0.29 |
+| **all 26 tasks** | | **0.058** | 5 of 13 templates | **0.283** |
+
+- Widening did not raise the share of informative dev templates: 5 of 13 (38%) have any success, versus 4
+  of 7 (57%) before. By the pre-declared rule, 8 of 13 dev templates are flagged "not informative for this
+  model" (never fully passed in 16 samples). Nothing has been dropped.
+- Of the 6 new dev templates, 2 are sometimes solved. Reading three failing outputs
+  (`unique_keep_last`, `fib_prefix_mod`, `version_compare`): the model returns the first occurrence or a
+  set, answers a different recursion, or misparses versions, so these are model errors and not broken
+  templates. The prompts agree with the references.
+- Numbers for vintage-1 templates fell against 6b (brackets pass@1 0.31 to 0.06, lis_gap 0.06 to 0,
+  vowel_positions 0.25 to 0.19, and test fractions lower everywhere). The rebalanced tests are the likely
+  cause for the drop in test fraction. I did not isolate the effect on full-pass rates, which could also
+  reflect sampling noise at k=8 on 2 instances.
+- The model is a base model prompted with one comment-style format. A few-shot prompt, the Instruct
+  variant or a larger model could raise the solved share. None of these was tried.
+
 ## 7. Decision gates
 
 Stage 2 continues past the smoke test only if all hold:
 
 1. The smoke test runs end to end: generation, sandbox verification and one LoRA step. **Met.**
 2. Base-model pass rates on dev-split tasks are neither near 0% nor near 100%, so the benchmark can
-   discriminate between policies. **Partly supported, still thin.** Sampled pass@1 is 10.7% and pass@8 is
-   35.7% on 14 dev tasks, so there is neither a ceiling nor a total floor. Four of seven templates are
-   sometimes solved; three are never solved in 16 samples. Seven templates is too few to call this
-   settled, and the unsolvable templates need replacing or a stronger model.
+   discriminate between policies. **Weak.** On bank v2, sampled pass@1 is 5.8% and 8 of 13 dev templates
+   are never fully passed in 16 samples. There is no ceiling, but near-floor behaviour on most templates
+   means that most of the bank would show no change even if training helped. A stronger model, a better
+   prompt or easier templates is needed before a policy comparison would be informative.
 3. Measured step times make a reduced pilot feasible within a budget the user approves. **Plausible on
    CPU**, pending timing at realistic sequence lengths and batch sizes.
 4. A paired-variance pilot on dev tasks is run before the H1 margin is pre-registered. **Not started.**
@@ -206,17 +247,18 @@ justified on dev data only and logged in the protocol revision log.
 - Real token accounting
 - A pre-registered H1 margin and the locked-test run
 
-## 9. Proposed next steps (need your go-ahead; no new downloads)
+## 9. Proposed next steps (need your go-ahead)
 
-1. Widen the bank. Dev has 7 templates, 3 of which the model never solves, which leaves 4 informative ones:
-   too few for a probe set, a stream-eval set and a variance estimate. Add templates in the stream
-   families, with splits assigned before looking at model outputs for them, and keep dropping templates
-   based only on pre-declared rules (for example "never solved in 16 base samples on dev"), logged in the
-   protocol revision log.
-2. Time a realistic LoRA update (batch of 8 sequences of about 300 tokens) and adapter evaluation.
-3. A tiny end-to-end dry run on dev: collect verified episodes from the base model's own sampled
-   successes, apply one policy's selection, take a few LoRA steps, re-measure dev pass rate. Purpose is
-   plumbing and timing, not results.
-4. Only then design the reduced pilot and pre-register the H1 margin from paired variance.
+Decision for you first: the base model solves too little of the bank (section 6c). Options, cheapest first:
 
-Steps 1 to 3 touch dev and train data only. The final-test split stays locked.
+1. **Prompt format** (no download): a few-shot prompt with one or two worked examples from a different
+   family. Rerun the dev diagnostic (11 minutes). Tests whether the floor is a prompt artefact.
+2. **Instruct variant** `Qwen/Qwen2.5-Coder-0.5B-Instruct` (apache-2.0, 0.99 GB download). Same speed.
+3. **Larger model** `Qwen/Qwen2.5-Coder-1.5B` (apache-2.0, 3.09 GB download, about 3x slower per token, so
+   about 35 minutes for the same dev diagnostic and more memory for LoRA; not yet measured).
+4. **Easier templates**: add templates to reach an informative spread. This changes the bank again and
+   risks tuning the benchmark to the model, so I would only do it by the declared drop and add rules.
+
+After that, in order: time a realistic LoRA update (8 sequences x 300 tokens); a tiny end-to-end dry run on
+dev for plumbing; then design the reduced pilot and pre-register the H1 margin from paired variance.
+Everything above touches dev and train data only. The final-test split stays locked.
