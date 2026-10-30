@@ -1,0 +1,23 @@
+{
+  "adapter_load_s": 0.05,
+  "adapter_mb": 4.38,
+  "adapter_save_s": 0.12,
+  "dtype": "fp32",
+  "gen_s_per_token": {
+    "merged_adapter": 0.1355,
+    "unmerged_adapter": 0.1459
+  },
+  "load_s": 0.9,
+  "merge_s": 0.04,
+  "mode": "gen",
+  "model": "Qwen/Qwen2.5-Coder-1.5B",
+  "natural_seq_tokens": {
+    "max": 286,
+    "mean": 168.9,
+    "min": 94
+  },
+  "peak_rss_gb": 9.51,
+  "rss_after_load_gb": 9.51,
+  "threads": 4,
+  "torch": "2.14.1+cpu"
+}

@@ -271,6 +271,38 @@ at or above 0.9; one is at 0.
 - Speed: 1.5B takes 2.6x as long per task as 0.5B, in line with my earlier estimate of about 3x.
   LoRA timing for the 1.5B model has not been measured.
 
+### 6f. LoRA update timing for Qwen2.5-Coder-1.5B (measured)
+
+Script `scripts/stage2_lora_timing.py`, one configuration per process, results in
+`results/stage2_lora_timing/*.json`. LoRA r=8, alpha 16, AdamW. Training text is a TRAIN prompt plus its
+reference solution, padded to 300 tokens (natural length 94 to 286, mean 169). Times are per optimiser step
+on a micro-batch, scaled to 8 sequences. 3 timed steps after a warm-up step. Content is irrelevant for timing;
+no learning is measured.
+
+| Config | Micro-batch | Grad ckpt | Time for 8 seqs | Peak RSS | Tokens/s |
+|---|---|---|---|---|---|
+| fp32, q/v | 1 | no | 58.0 s (steady state about 39 s, see note) | 9.5 GB | 41 (about 62 steady) |
+| fp32, q/v | 4 | yes | 42.6 s | 9.5 GB | 56 |
+| fp32, all linear | 1 | no | 37.7 s | 10.1 GB | 64 |
+| **bf16, q/v** | 1 | no | **9.8 s** | **5.2 GB** | 246 |
+| bf16, q/v | 4 | yes | 10.6 s | 6.2 GB | 226 |
+
+- Note on the 58 s: the three steps were 4.7, 5.0 and 12.1 s, so one outlier step inflates the mean. Steady
+  state is about 4.8 s per sequence, consistent with the all-linear run. Timing noise on this machine is
+  large with only 3 steps; read these as order-of-magnitude figures.
+- Memory finding: a single batch of 8 sequences x 128 tokens in fp32 ran out of memory and was killed (cgroup
+  OOM at about 14 GB resident) before I switched to micro-batches. fp32 training should use micro-batches of 1.
+- bf16 is about 4x faster than fp32 and uses about half the memory. The CPU has AMX bf16 and AVX512-bf16.
+  What I have not checked: whether bf16 training or bf16 generation changes solution quality. The 6e
+  dev results are fp32.
+- Adapter (r=8, q/v, 1.09 M parameters): 4.4 MB on disk, saved in 0.12 s, loaded in 0.05 s, merged in 0.04 s.
+- Generation with an adapter, fp32, batch 1: 0.146 s/token unmerged, 0.136 s/token merged (about 7 tokens/s),
+  so merging is a modest gain. bf16 generation speed was not measured.
+- Trainable parameters: 1.09 M (q/v), 9.2 M (all linear).
+
+Implication for a pilot: a bf16 update of about 8 sequences costs about 10 s, so updates are cheap compared
+with evaluation. Evaluation (sampled generation on dev tasks) dominates the budget.
+
 ## 7. Decision gates
 
 Stage 2 continues past the smoke test only if all hold:
@@ -280,8 +312,8 @@ Stage 2 continues past the smoke test only if all hold:
    discriminate between policies. **Supported with 1.5B, with caveats.** Sampled pass@1 is 0.212 (6e);
    12 of 13 dev templates have some success and none is saturated. Most templates have only a few
    successes in 16 samples. With 0.5B the gate was weak (pass@1 0.058, 8 of 13 templates flagged).
-3. Measured step times make a reduced pilot feasible within a budget the user approves. **Not yet
-   measured for 1.5B.** Generation is 2.6x slower than 0.5B, so a pilot is several times more expensive.
+3. Measured step times make a reduced pilot feasible within a budget the user approves. **Measured (6f):**
+   an 8-sequence bf16 update is about 10 s; evaluation dominates cost. bf16 quality effects are unchecked.
 4. A paired-variance pilot on dev tasks is run before the H1 margin is pre-registered. **Not started.**
 
 If gate 2 fails after a fair check, the honest result is "this task bank does not discriminate for this
@@ -300,8 +332,7 @@ justified on dev data only and logged in the protocol revision log.
 
 The 1.5B model gives a usable base (section 6e), so I propose using it as the Stage 2 model. Next, in order:
 
-1. **LoRA timing for 1.5B**: one realistic update (8 sequences of about 300 tokens, r=8 on q/v projections) and
-   adapter evaluation cost, plus peak memory. Dev/train data only, a few minutes, no new downloads.
+1. ~~LoRA timing for 1.5B~~ done (6f).
 2. **Plumbing dry run on dev**: collect verified episodes from the model's own sampled successes, apply one
    selection policy, take a few LoRA steps, re-measure dev pass rate. Purpose is plumbing and timing, not results.
 3. **Paired-variance pilot** to size the H1 margin before pre-registering it. The pilot design has to be
