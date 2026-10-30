@@ -29,6 +29,7 @@ def main() -> int:
     ap.add_argument("--per-template", type=int, default=2)
     ap.add_argument("--max-new", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--fewshot", action="store_true", help="prefix two worked examples (see stage2_smoke.SHOTS)")
     ap.add_argument("--out", default="results/stage2_dev_sampling")
     args = ap.parse_args()
 
@@ -48,7 +49,7 @@ def main() -> int:
     t0 = time.time()
     for ti, task in enumerate(dev):
         torch.manual_seed(args.seed * 100003 + ti)
-        ids = tok(format_prompt(task), return_tensors="pt")
+        ids = tok(format_prompt(task, args.fewshot), return_tensors="pt")
         with torch.no_grad():
             out = model.generate(
                 **ids, max_new_tokens=args.max_new, do_sample=True, temperature=args.temperature, top_p=1.0,
@@ -74,7 +75,7 @@ def main() -> int:
     for r in rows:
         per_tpl.setdefault(f"{r['family']}/{r['template']}", []).append(r)
     summary = {
-        "model": args.model, "k": args.k, "temperature": args.temperature, "seed": args.seed,
+        "model": args.model, "fewshot": args.fewshot, "k": args.k, "temperature": args.temperature, "seed": args.seed,
         "dev_tasks": len(rows), "pass_at_1_mean": sum(r["n_pass"] for r in rows) / (len(rows) * args.k),
         "pass_at_k": sum(r["n_pass"] > 0 for r in rows) / len(rows),
         "mean_test_fraction": sum(r["mean_test_fraction"] for r in rows) / len(rows),

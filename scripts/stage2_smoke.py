@@ -25,9 +25,34 @@ from experience_learning.stage2.tasks import TaskBank  # noqa: E402
 STOP = ["\n\n\n", "\nif __name__", "\nprint(", "\nassert", "\n# ", "\nclass ", "\ndef test"]
 
 
-def format_prompt(task) -> str:
-    lines = [f"# {ln}" if ln.strip() else "#" for ln in task.prompt.strip().splitlines()]
-    return "\n".join(lines) + "\n\ndef solve("
+# Two worked examples for the few-shot prompt. They are not bank templates (checked by
+# ``tests/test_prompts.py``) and were fixed before the few-shot dev run.
+SHOTS = (
+    (
+        "Return the sum of the squares of the odd numbers in the list.",
+        ["solve([1, 2, 3]) == 10", "solve([]) == 0", "solve([4, 6]) == 0"],
+        "def solve(nums):\n    return sum(x * x for x in nums if x % 2 == 1)",
+    ),
+    (
+        "Return the words of the string in reverse order, separated by single spaces.",
+        ['solve("a bc d") == "d bc a"', 'solve("") == ""', 'solve("x") == "x"'],
+        "def solve(s):\n    return ' '.join(reversed(s.split()))",
+    ),
+)
+
+
+def _comment_block(text: str) -> str:
+    return "\n".join(f"# {ln}" if ln.strip() else "#" for ln in text.strip().splitlines())
+
+
+def format_prompt(task, fewshot: bool = False) -> str:
+    shots = ""
+    if fewshot:
+        for desc, examples, code in SHOTS:
+            body = "Write a Python function solve that does the following.\n" + desc + "\nExamples:\n"
+            body += "\n".join("  " + e for e in examples)
+            shots += _comment_block(body) + "\n\n" + code + "\n\n\n"
+    return shots + _comment_block(task.prompt) + "\n\ndef solve("
 
 
 def clean(completion: str) -> str:
