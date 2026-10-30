@@ -221,6 +221,28 @@ Dev only; final_test untouched.
 - The model is a base model prompted with one comment-style format. A few-shot prompt, the Instruct
   variant or a larger model could raise the solved share. None of these was tried.
 
+### 6d. Few-shot prompt on bank v2 (measured)
+
+Same 26 dev tasks, k=8, T=0.8, seed 0 as 6c. The only change is two worked examples in front of each prompt
+(`stage2_smoke.SHOTS`: sum of squares of odd numbers, reverse words; neither is a bank template; fixed
+before the run). Command: `scripts/stage2_dev_sampling.py --fewshot --out results/stage2_dev_sampling_bank2_fewshot`.
+560 s. Dev only.
+
+| | zero-shot (6c) | few-shot |
+|---|---|---|
+| Sampled pass@1 | 0.058 | 0.053 |
+| Templates with any full pass in 16 samples | 5 of 13 | 4 of 13 |
+| Mean test fraction | 0.283 | 0.250 |
+
+- No improvement. Full passes per task moved up on 3 tasks, down on 3, unchanged on 20; with 1 to 3 passes per
+  task these differences are noise. Test fraction fell on 17 of 26 tasks and rose on 7. The templates that
+  were never solved stay never solved (the same 8 are flagged by the declared rule, plus `subset_sum_count`,
+  which lost its single success).
+- So the low solve rate is not mainly a prompt-format artefact, at least not for this kind of two-shot
+  prefix. I tried one few-shot design; other designs (more shots, shots from the same family, an
+  instruction-style wrapper) were not tried.
+- Cost of the few-shot prefix: about 150 more prompt tokens per attempt; generation time was not slower.
+
 ## 7. Decision gates
 
 Stage 2 continues past the smoke test only if all hold:
@@ -249,15 +271,17 @@ justified on dev data only and logged in the protocol revision log.
 
 ## 9. Proposed next steps (need your go-ahead)
 
-Decision for you first: the base model solves too little of the bank (section 6c). Options, cheapest first:
+The prompt is not the main cause of the low solve rate (section 6d). Remaining options:
 
-1. **Prompt format** (no download): a few-shot prompt with one or two worked examples from a different
-   family. Rerun the dev diagnostic (11 minutes). Tests whether the floor is a prompt artefact.
-2. **Instruct variant** `Qwen/Qwen2.5-Coder-0.5B-Instruct` (apache-2.0, 0.99 GB download). Same speed.
-3. **Larger model** `Qwen/Qwen2.5-Coder-1.5B` (apache-2.0, 3.09 GB download, about 3x slower per token, so
-   about 35 minutes for the same dev diagnostic and more memory for LoRA; not yet measured).
-4. **Easier templates**: add templates to reach an informative spread. This changes the bank again and
-   risks tuning the benchmark to the model, so I would only do it by the declared drop and add rules.
+1. **Instruct variant** `Qwen/Qwen2.5-Coder-0.5B-Instruct` (apache-2.0, 0.99 GB download). Same speed. It needs
+   a chat-style prompt, so the extraction code changes.
+2. **Larger model** `Qwen/Qwen2.5-Coder-1.5B` (apache-2.0, 3.09 GB download, about 3x slower per token, so
+   about 30 to 35 minutes for the same dev diagnostic; not yet measured; more memory for LoRA).
+3. **Easier templates**: changes the bank again and risks tuning it to the model, so only under the declared
+   rules, and probably after 1 or 2.
+
+My recommendation is 2: it is the same family and licence, the 1.5B model should have more headroom, and a
+3 GB download is small. I cannot say in advance how much it helps.
 
 After that, in order: time a realistic LoRA update (8 sequences x 300 tokens); a tiny end-to-end dry run on
 dev for plumbing; then design the reduced pilot and pre-register the H1 margin from paired variance.

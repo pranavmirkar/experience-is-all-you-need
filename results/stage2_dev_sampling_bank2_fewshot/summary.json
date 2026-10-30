@@ -1,0 +1,79 @@
+{
+  "dev_tasks": 26,
+  "fewshot": true,
+  "k": 8,
+  "mean_test_fraction": 0.250400641025641,
+  "model": "Qwen/Qwen2.5-Coder-0.5B",
+  "pass_at_1_mean": 0.052884615384615384,
+  "pass_at_k": 0.23076923076923078,
+  "per_template": {
+    "dicts/anagram_groups": {
+      "mean_test_fraction": 0.16145833333333334,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "dicts/merge_filter": {
+      "mean_test_fraction": 0.125,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "dp/lis_gap": {
+      "mean_test_fraction": 0.16145833333333334,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "dp/subset_sum_count": {
+      "mean_test_fraction": 0.21875,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "lists/second_largest": {
+      "mean_test_fraction": 0.30208333333333337,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "lists/unique_keep_last": {
+      "mean_test_fraction": 0.21354166666666666,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "math/digit_root_base": {
+      "mean_test_fraction": 0.23958333333333334,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "math/fib_prefix_mod": {
+      "mean_test_fraction": 0.078125,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "parsing/brackets": {
+      "mean_test_fraction": 0.5989583333333333,
+      "pass_at_1": 0.125,
+      "pass_at_8": 0.5
+    },
+    "parsing/kv_parse": {
+      "mean_test_fraction": 0.11979166666666666,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "parsing/version_compare": {
+      "mean_test_fraction": 0.25,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "strings/case_by_index": {
+      "mean_test_fraction": 0.4166666666666667,
+      "pass_at_1": 0.3125,
+      "pass_at_8": 1.0
+    },
+    "strings/vowel_positions": {
+      "mean_test_fraction": 0.3697916666666667,
+      "pass_at_1": 0.125,
+      "pass_at_8": 0.5
+    }
+  },
+  "seed": 0,
+  "temperature": 0.8,
+  "wall_s": 560.0
+}
