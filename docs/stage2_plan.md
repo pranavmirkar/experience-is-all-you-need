@@ -341,3 +341,42 @@ The 1.5B model gives a usable base (section 6e), so I propose using it as the St
 4. Pre-register H1, then (only then) consider the locked final test.
 
 Everything above touches dev and train data only. The final-test split stays locked.
+
+## 10. Plumbing dry run (settings fixed before the run)
+
+Script `scripts/stage2_dry_run.py`, output `results/stage2_dry_run/`. **Purpose: exercise the full path and measure
+its cost. Not an experiment.** One seed, tiny samples, no tuning, no hypothesis test. Whatever the numbers
+look like, they must not be read as evidence about any policy.
+
+Path: base model (bf16) samples attempts on TRAIN tasks, one phase per stream family (strings, lists, dicts,
+math, dp); the sandbox verifies them; attempts that pass all tests become verified `Episode`s (failed attempts
+stay unverified and the buffer's gate rejects them); the TRAIN buffer feeds a policy that picks replay
+episodes under a token budget; a LoRA update trains on new + replayed episodes (completion tokens only);
+after each phase the adapter is evaluated on DEV. `evaluation.run_stream` from Stage 1 is mirrored, with the
+simulator replaced by the model. Policies run: `sequential`, `uniform`, `loss_fresh` (the last exercises the
+`current_loss` hook with a real forward pass).
+
+Fixed settings: Qwen2.5-Coder-1.5B, bf16; collection: 2 instances per TRAIN template (10 tasks per family) x 8
+samples at T=0.8; 3 optimiser steps per phase; each step trains on up to 600 tokens of new verified episodes
+plus up to 600 tokens of replay (token counts are chars/4); LoRA r=8, alpha 16, q/v, AdamW lr 1e-4, grad clip
+1.0, micro-batch 1 with accumulation; buffer capacity 200; adapter seed 0 for every policy. Evaluation: 13 DEV
+tasks (1 instance of each of 2 dev templates per stream family, plus the 3 `parsing` dev templates) x 4
+samples at T=0.8, after every phase and once for the base model. Expected cost about 1.5 to 2 hours of CPU
+(estimated from 6e and the bf16 generation benchmark: bf16 sampling is 2.2x (k=4) to 2.9x (k=8) faster than fp32
+in aggregate tokens/s; unmerged adapter overhead about 8%).
+
+Known limitations (decided in advance):
+
+- The 52 evaluation samples per point give a standard error of about 0.05 to 0.07 at a pass rate near 0.2.
+  Differences between policies of that size are noise, and there is one seed.
+- DEV evaluation instances are the first instance of each dev template, the same ones in every evaluation.
+  A separate probe set (dev instances at a different offset) is not used because none of these three
+  policies reads a probe.
+- Verified episodes are the model's own successful samples, so training on them is self-distillation of
+  successes. Failed attempts have no correction in this dry run.
+- Replay candidates are only earlier phases' verified episodes, as in Stage 1.
+- bf16 quality effects are not validated; the base-model DEV score here (bf16) can be compared with 6e (fp32)
+  only loosely.
+- A crash test on the 0.5B model with tiny settings and reference solutions injected as verified episodes
+  confirmed the code path (collection, gate rejection, replay only from earlier phases, 10 loss scoring
+  passes counted for `loss_fresh`, adapter reset between policies). Its numbers are meaningless and not kept.
