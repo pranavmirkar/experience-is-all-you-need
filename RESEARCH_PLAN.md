@@ -32,7 +32,7 @@ gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), 
 
 1. Done in Stage 2 so far: sandboxed executor and a 52-template task bank (bank v2) (`docs/stage2_plan.md`).
 2. Done: smoke test on Qwen2.5-Coder-0.5B (results in `docs/stage2_plan.md` section 6; 10 tok/s, LoRA step under 1 s, base dev full-pass 2 of 14).
-3. Gate 2 (benchmark discriminates) is weak: on bank v2 sampled dev pass@1 is 0.058 and 8 of 13 dev templates are never fully passed in 16 samples. A two-shot prompt did not help (pass@1 0.053). Next: choose between the Instruct variant and a larger model (`docs/stage2_plan.md` section 9).
+3. Gate 2 (benchmark discriminates) was weak with 0.5B; with Qwen2.5-Coder-1.5B it is supported with caveats (dev pass@1 0.212, 12 of 13 templates sometimes solved). Earlier 0.5B finding: on bank v2 sampled dev pass@1 is 0.058 and 8 of 13 dev templates are never fully passed in 16 samples. A two-shot prompt did not help (pass@1 0.053). Next: LoRA timing for 1.5B, plumbing dry run, paired-variance pilot (`docs/stage2_plan.md` section 9).
 4. Paired-variance pilot on dev tasks before pre-registering the H1 margin.
 5. Literature: remaining open items are listed in `docs/literature_review.md` (53 entries beyond the brief).
 

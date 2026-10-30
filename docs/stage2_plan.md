@@ -95,7 +95,7 @@ sandbox is not strong. They include a polling test that no sandboxed process out
 | bigcode/tiny_starcoder_py | bigcode-openrail-m | 164M | 0.66 GB | Use restrictions in licence. |
 | HuggingFaceTB/SmolLM2-360M, -135M | apache-2.0 | 360M / 135M | 0.72 / 0.27 GB | General-purpose, not code-specific. |
 
-Recommendation: `Qwen/Qwen2.5-Coder-0.5B` (base). It is the smallest permissively licensed
+Original recommendation was `Qwen/Qwen2.5-Coder-0.5B` (base); the dev diagnostics (section 6) found it too weak on this bank, and `Qwen/Qwen2.5-Coder-1.5B` (6e) is now the working choice. Original text: It is the smallest permissively licensed
 model with real code training, and it fits in RAM with room for LoRA. It might be too weak or
 too strong for the task bank; section 7 gates on that. The Instruct variant is the fallback if
 the base model does not follow the prompt format.
@@ -243,18 +243,45 @@ before the run). Command: `scripts/stage2_dev_sampling.py --fewshot --out result
   instruction-style wrapper) were not tried.
 - Cost of the few-shot prefix: about 150 more prompt tokens per attempt; generation time was not slower.
 
+### 6e. Qwen2.5-Coder-1.5B on bank v2 (measured)
+
+Downloaded `Qwen/Qwen2.5-Coder-1.5B` (apache-2.0, 3,087,467,144-byte safetensors file; 17 s). Same 26 dev tasks,
+same zero-shot prompt, k=8, T=0.8, seed 0 as 6c. Command:
+`scripts/stage2_dev_sampling.py --model Qwen/Qwen2.5-Coder-1.5B --out results/stage2_dev_sampling_bank2_1p5b`.
+Dev only; final_test untouched.
+
+| | 0.5B (6c) | 1.5B |
+|---|---|---|
+| Sampled pass@1 | 0.058 | 0.212 |
+| Templates with any full pass in 16 samples | 5 of 13 | 12 of 13 |
+| Mean test fraction | 0.283 | 0.443 |
+| Wall time for 26 tasks x 8 samples | 659 s | 1705 s (2.6x) |
+| System memory in use mid-run (`free`) | not recorded | about 7 GB (fp32) |
+
+Per template, 1.5B pass@1 (of 16 samples): case_by_index 0.75, second_largest 0.31, fib_prefix_mod 0.25,
+vowel_positions 0.25, anagram_groups 0.19, digit_root_base 0.19, brackets 0.19, version_compare 0.19,
+merge_filter 0.12, unique_keep_last 0.12, kv_parse 0.12, subset_sum_count 0.06, lis_gap 0. No template is
+at or above 0.9; one is at 0.
+
+- Per-task full passes were higher with 1.5B on 19 of 26 tasks, lower on none, equal on 7.
+- Only `lis_gap` is flagged by the declared drop rule now (8 of 13 with 0.5B). Nothing is dropped.
+- Caveat: most templates sit at 1 to 3 successes per 16 samples. The bank is no longer at the floor, but
+  it is still hard for this model, and per-template rates have wide uncertainty that I have not quantified.
+  A policy that raises pass rates would have room to show it, and the margin to detect is not yet known.
+- Speed: 1.5B takes 2.6x as long per task as 0.5B, in line with my earlier estimate of about 3x.
+  LoRA timing for the 1.5B model has not been measured.
+
 ## 7. Decision gates
 
 Stage 2 continues past the smoke test only if all hold:
 
 1. The smoke test runs end to end: generation, sandbox verification and one LoRA step. **Met.**
 2. Base-model pass rates on dev-split tasks are neither near 0% nor near 100%, so the benchmark can
-   discriminate between policies. **Weak.** On bank v2, sampled pass@1 is 5.8% and 8 of 13 dev templates
-   are never fully passed in 16 samples. There is no ceiling, but near-floor behaviour on most templates
-   means that most of the bank would show no change even if training helped. A stronger model, a better
-   prompt or easier templates is needed before a policy comparison would be informative.
-3. Measured step times make a reduced pilot feasible within a budget the user approves. **Plausible on
-   CPU**, pending timing at realistic sequence lengths and batch sizes.
+   discriminate between policies. **Supported with 1.5B, with caveats.** Sampled pass@1 is 0.212 (6e);
+   12 of 13 dev templates have some success and none is saturated. Most templates have only a few
+   successes in 16 samples. With 0.5B the gate was weak (pass@1 0.058, 8 of 13 templates flagged).
+3. Measured step times make a reduced pilot feasible within a budget the user approves. **Not yet
+   measured for 1.5B.** Generation is 2.6x slower than 0.5B, so a pilot is several times more expensive.
 4. A paired-variance pilot on dev tasks is run before the H1 margin is pre-registered. **Not started.**
 
 If gate 2 fails after a fair check, the honest result is "this task bank does not discriminate for this
@@ -271,18 +298,15 @@ justified on dev data only and logged in the protocol revision log.
 
 ## 9. Proposed next steps (need your go-ahead)
 
-The prompt is not the main cause of the low solve rate (section 6d). Remaining options:
+The 1.5B model gives a usable base (section 6e), so I propose using it as the Stage 2 model. Next, in order:
 
-1. **Instruct variant** `Qwen/Qwen2.5-Coder-0.5B-Instruct` (apache-2.0, 0.99 GB download). Same speed. It needs
-   a chat-style prompt, so the extraction code changes.
-2. **Larger model** `Qwen/Qwen2.5-Coder-1.5B` (apache-2.0, 3.09 GB download, about 3x slower per token, so
-   about 30 to 35 minutes for the same dev diagnostic; not yet measured; more memory for LoRA).
-3. **Easier templates**: changes the bank again and risks tuning it to the model, so only under the declared
-   rules, and probably after 1 or 2.
+1. **LoRA timing for 1.5B**: one realistic update (8 sequences of about 300 tokens, r=8 on q/v projections) and
+   adapter evaluation cost, plus peak memory. Dev/train data only, a few minutes, no new downloads.
+2. **Plumbing dry run on dev**: collect verified episodes from the model's own sampled successes, apply one
+   selection policy, take a few LoRA steps, re-measure dev pass rate. Purpose is plumbing and timing, not results.
+3. **Paired-variance pilot** to size the H1 margin before pre-registering it. The pilot design has to be
+   cut to fit the CPU budget (1.5B generation is about 8 s per attempt in this setup; the number of tasks,
+   samples and seeds per policy will be set from measured times).
+4. Pre-register H1, then (only then) consider the locked final test.
 
-My recommendation is 2: it is the same family and licence, the 1.5B model should have more headroom, and a
-3 GB download is small. I cannot say in advance how much it helps.
-
-After that, in order: time a realistic LoRA update (8 sequences x 300 tokens); a tiny end-to-end dry run on
-dev for plumbing; then design the reduced pilot and pre-register the H1 margin from paired variance.
 Everything above touches dev and train data only. The final-test split stays locked.

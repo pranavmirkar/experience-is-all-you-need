@@ -1,0 +1,79 @@
+{
+  "dev_tasks": 26,
+  "fewshot": false,
+  "k": 8,
+  "mean_test_fraction": 0.4431089743589744,
+  "model": "Qwen/Qwen2.5-Coder-1.5B",
+  "pass_at_1_mean": 0.21153846153846154,
+  "pass_at_k": 0.8461538461538461,
+  "per_template": {
+    "dicts/anagram_groups": {
+      "mean_test_fraction": 0.359375,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 0.5
+    },
+    "dicts/merge_filter": {
+      "mean_test_fraction": 0.30208333333333337,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "dp/lis_gap": {
+      "mean_test_fraction": 0.359375,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "dp/subset_sum_count": {
+      "mean_test_fraction": 0.359375,
+      "pass_at_1": 0.0625,
+      "pass_at_8": 0.5
+    },
+    "lists/second_largest": {
+      "mean_test_fraction": 0.6458333333333333,
+      "pass_at_1": 0.3125,
+      "pass_at_8": 1.0
+    },
+    "lists/unique_keep_last": {
+      "mean_test_fraction": 0.27604166666666663,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "math/digit_root_base": {
+      "mean_test_fraction": 0.390625,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 1.0
+    },
+    "math/fib_prefix_mod": {
+      "mean_test_fraction": 0.3333333333333333,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    },
+    "parsing/brackets": {
+      "mean_test_fraction": 0.65625,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 1.0
+    },
+    "parsing/kv_parse": {
+      "mean_test_fraction": 0.265625,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "parsing/version_compare": {
+      "mean_test_fraction": 0.5572916666666666,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 1.0
+    },
+    "strings/case_by_index": {
+      "mean_test_fraction": 0.7916666666666667,
+      "pass_at_1": 0.75,
+      "pass_at_8": 1.0
+    },
+    "strings/vowel_positions": {
+      "mean_test_fraction": 0.46354166666666663,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    }
+  },
+  "seed": 0,
+  "temperature": 0.8,
+  "wall_s": 1704.5
+}
