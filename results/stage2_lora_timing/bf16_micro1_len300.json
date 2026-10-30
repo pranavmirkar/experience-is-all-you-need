@@ -1,0 +1,33 @@
+{
+  "config": {
+    "grad_ckpt": false,
+    "len": 300,
+    "micro": 1,
+    "r": 8,
+    "targets": "qv"
+  },
+  "dtype": "bf16",
+  "last_loss_finite": true,
+  "load_s": 0.2,
+  "mean_micro_step_s": 1.22,
+  "mode": "train",
+  "model": "Qwen/Qwen2.5-Coder-1.5B",
+  "natural_seq_tokens": {
+    "max": 286,
+    "mean": 168.9,
+    "min": 94
+  },
+  "peak_rss_gb": 5.24,
+  "rss_after_load_gb": 0.48,
+  "step_s": [
+    1.29,
+    1.23,
+    1.14
+  ],
+  "threads": 4,
+  "tokens_per_s": 245.9,
+  "torch": "2.14.1+cpu",
+  "trainable_params": 1089536,
+  "update_s_for_8_seqs": 9.8,
+  "warmup_s": 2.78
+}
