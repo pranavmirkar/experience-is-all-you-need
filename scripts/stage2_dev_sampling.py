@@ -30,6 +30,7 @@ def main() -> int:
     ap.add_argument("--max-new", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fewshot", action="store_true", help="prefix two worked examples (see stage2_smoke.SHOTS)")
+    ap.add_argument("--dtype", choices=["fp32", "bf16"], default="fp32")
     ap.add_argument("--out", default="results/stage2_dev_sampling")
     args = ap.parse_args()
 
@@ -38,7 +39,7 @@ def main() -> int:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(args.model)
-    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32).eval()
+    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=torch.float32 if args.dtype == "fp32" else torch.bfloat16).eval()
     bank = TaskBank(0)
     dev = []
     for fam in ("strings", "lists", "dicts", "math", "dp", "parsing"):
@@ -75,7 +76,7 @@ def main() -> int:
     for r in rows:
         per_tpl.setdefault(f"{r['family']}/{r['template']}", []).append(r)
     summary = {
-        "model": args.model, "fewshot": args.fewshot, "k": args.k, "temperature": args.temperature, "seed": args.seed,
+        "model": args.model, "dtype": args.dtype, "fewshot": args.fewshot, "k": args.k, "temperature": args.temperature, "seed": args.seed,
         "dev_tasks": len(rows), "pass_at_1_mean": sum(r["n_pass"] for r in rows) / (len(rows) * args.k),
         "pass_at_k": sum(r["n_pass"] > 0 for r in rows) / len(rows),
         "mean_test_fraction": sum(r["mean_test_fraction"] for r in rows) / len(rows),
