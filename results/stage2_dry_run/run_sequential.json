@@ -1,0 +1,395 @@
+{
+  "buffer_size": 99,
+  "policy": "sequential",
+  "rejected_unverified": 301,
+  "replay_counts": {},
+  "rows": [
+    {
+      "pass_by_family": {
+        "dicts": 0.0,
+        "dp": 0.0,
+        "lists": 0.0,
+        "math": 0.0,
+        "parsing": 0.08333333333333333,
+        "strings": 0.375
+      },
+      "pass_overall": 0.07692307692307693,
+      "test_fraction_by_family": {
+        "dicts": 0.34375,
+        "dp": 0.14583333333333334,
+        "lists": 0.3125,
+        "math": 0.10416666666666666,
+        "parsing": 0.3611111111111111,
+        "strings": 0.4791666666666667
+      },
+      "test_fraction_overall": 0.296474358974359
+    },
+    {
+      "pass_by_family": {
+        "dicts": 0.0,
+        "dp": 0.0,
+        "lists": 0.0,
+        "math": 0.0,
+        "parsing": 0.08333333333333333,
+        "strings": 0.375
+      },
+      "pass_overall": 0.07692307692307693,
+      "test_fraction_by_family": {
+        "dicts": 0.3020833333333333,
+        "dp": 0.125,
+        "lists": 0.28125,
+        "math": 0.09375,
+        "parsing": 0.4236111111111111,
+        "strings": 0.4583333333333333
+      },
+      "test_fraction_overall": 0.29166666666666663
+    },
+    {
+      "pass_by_family": {
+        "dicts": 0.125,
+        "dp": 0.0,
+        "lists": 0.0,
+        "math": 0.0,
+        "parsing": 0.08333333333333333,
+        "strings": 0.375
+      },
+      "pass_overall": 0.09615384615384616,
+      "test_fraction_by_family": {
+        "dicts": 0.5,
+        "dp": 0.15625,
+        "lists": 0.2916666666666667,
+        "math": 0.09375,
+        "parsing": 0.3819444444444444,
+        "strings": 0.4583333333333333
+      },
+      "test_fraction_overall": 0.3189102564102564
+    },
+    {
+      "pass_by_family": {
+        "dicts": 0.0,
+        "dp": 0.0,
+        "lists": 0.25,
+        "math": 0.0,
+        "parsing": 0.16666666666666666,
+        "strings": 0.375
+      },
+      "pass_overall": 0.1346153846153846,
+      "test_fraction_by_family": {
+        "dicts": 0.375,
+        "dp": 0.125,
+        "lists": 0.5104166666666666,
+        "math": 0.11458333333333333,
+        "parsing": 0.3819444444444444,
+        "strings": 0.4583333333333333
+      },
+      "test_fraction_overall": 0.3317307692307692
+    },
+    {
+      "pass_by_family": {
+        "dicts": 0.0,
+        "dp": 0.0,
+        "lists": 0.125,
+        "math": 0.0,
+        "parsing": 0.16666666666666666,
+        "strings": 0.375
+      },
+      "pass_overall": 0.11538461538461539,
+      "test_fraction_by_family": {
+        "dicts": 0.40625,
+        "dp": 0.13541666666666666,
+        "lists": 0.4375,
+        "math": 0.11458333333333333,
+        "parsing": 0.46527777777777773,
+        "strings": 0.4583333333333333
+      },
+      "test_fraction_overall": 0.34615384615384615
+    }
+  ],
+  "scoring_passes": 0,
+  "steps": [
+    {
+      "loss": 0.6694635339081287,
+      "new": 6,
+      "phase": 0,
+      "replay": [
+        "train/strings/count_overlap/0000@5",
+        "train/strings/shift_letters/0001@73",
+        "train/strings/loose_palindrome/0000@38",
+        "train/strings/shift_letters/0000@67"
+      ],
+      "replay_families": [
+        "strings",
+        "strings",
+        "strings",
+        "strings"
+      ],
+      "step": 0
+    },
+    {
+      "loss": 0.6458048038184643,
+      "new": 4,
+      "phase": 0,
+      "replay": [
+        "train/strings/shift_letters/0000@67",
+        "train/strings/shift_letters/0001@73",
+        "train/strings/loose_palindrome/0001@47",
+        "train/strings/loose_palindrome/0000@38"
+      ],
+      "replay_families": [
+        "strings",
+        "strings",
+        "strings",
+        "strings"
+      ],
+      "step": 1
+    },
+    {
+      "loss": 0.6035990379750729,
+      "new": 5,
+      "phase": 0,
+      "replay": [
+        "train/strings/shift_letters/0000@67",
+        "train/strings/count_overlap/0001@9",
+        "train/strings/count_overlap/0001@15",
+        "train/strings/shift_letters/0000@66",
+        "train/strings/loose_palindrome/0001@44"
+      ],
+      "replay_families": [
+        "strings",
+        "strings",
+        "strings",
+        "strings",
+        "strings"
+      ],
+      "step": 2
+    },
+    {
+      "loss": 0.7464846409857273,
+      "new": 4,
+      "phase": 1,
+      "replay": [
+        "train/lists/pair_count/0001@1128",
+        "train/lists/pair_count/0001@1122",
+        "train/lists/power_sum/0001@1144",
+        "train/lists/window_sums/0001@1160",
+        "train/lists/window_sums/0000@1151"
+      ],
+      "replay_families": [
+        "lists",
+        "lists",
+        "lists",
+        "lists",
+        "lists"
+      ],
+      "step": 0
+    },
+    {
+      "loss": 0.7411563657224178,
+      "new": 5,
+      "phase": 1,
+      "replay": [
+        "train/lists/window_sums/0001@1159",
+        "train/lists/window_sums/0001@1155",
+        "train/lists/pair_count/0001@1128",
+        "train/lists/pair_count/0001@1124",
+        "train/lists/power_sum/0001@1142"
+      ],
+      "replay_families": [
+        "lists",
+        "lists",
+        "lists",
+        "lists",
+        "lists"
+      ],
+      "step": 1
+    },
+    {
+      "loss": 0.7172878235578537,
+      "new": 5,
+      "phase": 1,
+      "replay": [
+        "train/lists/best_rise/0000@1082",
+        "train/lists/pair_count/0001@1124",
+        "train/lists/pair_count/0000@1120",
+        "train/lists/window_sums/0001@1155",
+        "train/lists/power_sum/0001@1140"
+      ],
+      "replay_families": [
+        "lists",
+        "lists",
+        "lists",
+        "lists",
+        "lists"
+      ],
+      "step": 2
+    },
+    {
+      "loss": 0.516560398042202,
+      "new": 3,
+      "phase": 2,
+      "replay": [
+        "train/dicts/increment_prune/0000@2179",
+        "train/dicts/mode_smallest/0000@2232",
+        "train/dicts/mode_smallest/0000@2225"
+      ],
+      "replay_families": [
+        "dicts",
+        "dicts",
+        "dicts"
+      ],
+      "step": 0
+    },
+    {
+      "loss": 0.6124921962618828,
+      "new": 4,
+      "phase": 2,
+      "replay": [
+        "train/dicts/initial_counts/0000@2200",
+        "train/dicts/mode_smallest/0000@2225",
+        "train/dicts/initial_counts/0001@2202"
+      ],
+      "replay_families": [
+        "dicts",
+        "dicts",
+        "dicts"
+      ],
+      "step": 1
+    },
+    {
+      "loss": 0.5563552156090736,
+      "new": 3,
+      "phase": 2,
+      "replay": [
+        "train/dicts/initial_counts/0000@2193",
+        "train/dicts/group_sum/0001@2169",
+        "train/dicts/initial_counts/0001@2202"
+      ],
+      "replay_families": [
+        "dicts",
+        "dicts",
+        "dicts"
+      ],
+      "step": 2
+    },
+    {
+      "loss": 0.6130743212997913,
+      "new": 6,
+      "phase": 3,
+      "replay": [
+        "train/math/digit_sum_multiples/0000@3263",
+        "train/math/digit_sum_multiples/0001@3269",
+        "train/math/divisor_sum_limit/0001@3283",
+        "train/math/base_palindromes/0000@3241",
+        "train/math/divisor_sum_limit/0000@3278"
+      ],
+      "replay_families": [
+        "math",
+        "math",
+        "math",
+        "math",
+        "math"
+      ],
+      "step": 0
+    },
+    {
+      "loss": 0.6131067872047424,
+      "new": 6,
+      "phase": 3,
+      "replay": [
+        "train/math/digit_sum_multiples/0001@3269",
+        "train/math/digit_sum_multiples/0000@3263",
+        "train/math/divisor_sum_limit/0001@3281",
+        "train/math/digit_sum_multiples/0000@3259",
+        "train/math/gcd_offset/0001@3303",
+        "train/math/divisor_sum_limit/0001@3282"
+      ],
+      "replay_families": [
+        "math",
+        "math",
+        "math",
+        "math",
+        "math",
+        "math"
+      ],
+      "step": 1
+    },
+    {
+      "loss": 0.6018833089619875,
+      "new": 6,
+      "phase": 3,
+      "replay": [
+        "train/math/base_palindromes/0000@3241",
+        "train/math/divisor_sum_limit/0001@3285",
+        "train/math/digit_sum_multiples/0000@3259",
+        "train/math/divisor_sum_limit/0001@3282",
+        "train/math/recurrence/0000@3312",
+        "train/math/divisor_sum_limit/0000@3278"
+      ],
+      "replay_families": [
+        "math",
+        "math",
+        "math",
+        "math",
+        "math",
+        "math"
+      ],
+      "step": 2
+    },
+    {
+      "loss": 0.4733068682253361,
+      "new": 4,
+      "phase": 4,
+      "replay": [
+        "train/dp/edit_distance/0001@4366",
+        "train/dp/spaced_pick_max/0000@4385",
+        "train/dp/edit_distance/0000@4358"
+      ],
+      "replay_families": [
+        "dp",
+        "dp",
+        "dp"
+      ],
+      "step": 0
+    },
+    {
+      "loss": 0.4726111479103565,
+      "new": 4,
+      "phase": 4,
+      "replay": [
+        "train/dp/edit_distance/0000@4358",
+        "train/dp/edit_distance/0001@4363",
+        "train/dp/edit_distance/0001@4366"
+      ],
+      "replay_families": [
+        "dp",
+        "dp",
+        "dp"
+      ],
+      "step": 1
+    },
+    {
+      "loss": 0.4673250373452902,
+      "new": 3,
+      "phase": 4,
+      "replay": [
+        "train/dp/spaced_pick_max/0000@4385",
+        "train/dp/edit_distance/0000@4358",
+        "train/dp/common_run/0001@4346",
+        "train/dp/coin_min/0000@4321"
+      ],
+      "replay_families": [
+        "dp",
+        "dp",
+        "dp",
+        "dp"
+      ],
+      "step": 2
+    }
+  ],
+  "timing_s": {
+    "eval_s": 1568.984500169754,
+    "select_s": 0.0009734630584716797,
+    "train_s": 123.68867897987366
+  },
+  "wall_s": 1692.8
+}
