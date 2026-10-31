@@ -421,14 +421,10 @@ What the run does show:
   43%, dicts 31%, math 20%, dp 9%).
 - Peak memory 8.2 GB (bf16).
 
-**Open problem: bf16 may degrade sampling quality.** On the same 13 DEV tasks (first instance of each dev
-template), the earlier fp32 diagnostic (6e) gave 25 of 104 full passes (0.24) and 0.47 of tests passed. The
-bf16 base model here gave 5 of 52 (0.096) and 0.295 (about 2.5 standard errors apart on pass rate; different random
-seeds and sample counts). This looks like a real quality drop from bf16, though the evidence is weak. If it holds,
-bf16 evaluation and bf16 training would not be comparable with the fp32 numbers, and the 4x speed gain from bf16
-costs accuracy. Resolve this before any pilot: run the bf16 base model on the same 26-task, k=8 protocol as 6e
-(about 10 minutes) and compare directly, and consider fp32 evaluation with bf16 training only if the cost is
-acceptable.
+**bf16 vs fp32 (raised here, resolved in 10c).** The dry run's bf16 base score (5 of 52, 0.096) looked low next
+to the earlier fp32 diagnostic on the same 13 DEV tasks (25 of 104, 0.24), about 2.5 standard errors apart. I
+flagged it as a possible bf16 quality drop. The matched check in 10c shows no such drop; the gap was sampling
+noise.
 
 Other limitations of the dry run (as decided in advance, plus two found):
 
@@ -438,10 +434,33 @@ Other limitations of the dry run (as decided in advance, plus two found):
 - `sequential` (scope: current phase) replays other current-phase episodes, so it is "extra steps on current
   data", not zero extra data; this follows the Stage 1 definition.
 
+### 10c. bf16 vs fp32, matched protocol (measured)
+
+Same 26 DEV tasks, k=8, T=0.8, seed 0, zero-shot prompt, Qwen2.5-Coder-1.5B as in 6e; only the dtype differs
+(`scripts/stage2_dev_sampling.py --dtype bf16 --out results/stage2_dev_sampling_bank2_1p5b_bf16`).
+
+| | fp32 (6e) | bf16 |
+|---|---|---|
+| Sampled pass@1 | 0.212 (44 of 208) | 0.202 (42 of 208) |
+| Templates with any full pass in 16 samples | 12 of 13 | 11 of 13 |
+| Mean test fraction | 0.443 | 0.446 |
+| Wall time | 1705 s | 805 s |
+
+- Difference in pass rate -0.010 with a standard error of 0.040 (z = -0.24). Per task, bf16 was better on 3,
+  worse on 4, equal on 19. Per-template rates agree within the sample noise visible in 16 samples.
+- So there is no detectable bf16 quality loss on this protocol, and bf16 sampling is 2.1x faster. I cannot
+  exclude a small loss (the interval is roughly +-0.08 on the pass rate), and I only checked sampling from the
+  base model, not the behaviour of bf16 LoRA training over many steps.
+- On the 13 instance-0 tasks used in the dry run, this bf16 run passed 21 of 104 (0.20), against 5 of 52
+  (0.096) for the dry run's bf16 base. Two bf16 runs of the same model on the same tasks differ by about 1.9
+  standard errors, which fits the spread I should expect when I compare 52-sample numbers. It also means
+  the 52-sample points in 10b were too noisy to be useful, as stated there. The earlier "2.5 standard errors"
+  alarm was overstated.
+- Decision: use bf16 for sampling and training from here on, subject to the one remaining caveat above.
+
 ## 11. Proposed next steps (need your go-ahead)
 
-1. **Resolve bf16 vs fp32** (about 10 minutes, no download): rerun the 6e protocol (26 dev tasks, k=8,
-   T=0.8) with the bf16 base model and compare per template with the fp32 result.
+1. ~~Resolve bf16 vs fp32~~ done (10c): no detectable difference; bf16 is 2.1x faster.
 2. **Decide evaluation size and budget.** The pilot is limited by evaluation. Options: fewer, larger evaluation
    points (for example only before and after the stream), larger k on fewer tasks, or running on a GPU
    (needs a provider and a budget; I have not chosen one). I would want your budget in hours of CPU time.

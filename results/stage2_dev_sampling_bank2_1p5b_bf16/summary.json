@@ -1,0 +1,80 @@
+{
+  "dev_tasks": 26,
+  "dtype": "bf16",
+  "fewshot": false,
+  "k": 8,
+  "mean_test_fraction": 0.44591346153846156,
+  "model": "Qwen/Qwen2.5-Coder-1.5B",
+  "pass_at_1_mean": 0.20192307692307693,
+  "pass_at_k": 0.8076923076923077,
+  "per_template": {
+    "dicts/anagram_groups": {
+      "mean_test_fraction": 0.38020833333333337,
+      "pass_at_1": 0.0625,
+      "pass_at_8": 0.5
+    },
+    "dicts/merge_filter": {
+      "mean_test_fraction": 0.24479166666666669,
+      "pass_at_1": 0.0625,
+      "pass_at_8": 0.5
+    },
+    "dp/lis_gap": {
+      "mean_test_fraction": 0.33854166666666663,
+      "pass_at_1": 0.0,
+      "pass_at_8": 0.0
+    },
+    "dp/subset_sum_count": {
+      "mean_test_fraction": 0.35416666666666663,
+      "pass_at_1": 0.0625,
+      "pass_at_8": 0.5
+    },
+    "lists/second_largest": {
+      "mean_test_fraction": 0.6145833333333334,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    },
+    "lists/unique_keep_last": {
+      "mean_test_fraction": 0.296875,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "math/digit_root_base": {
+      "mean_test_fraction": 0.40625,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 1.0
+    },
+    "math/fib_prefix_mod": {
+      "mean_test_fraction": 0.3177083333333333,
+      "pass_at_1": 0.1875,
+      "pass_at_8": 1.0
+    },
+    "parsing/brackets": {
+      "mean_test_fraction": 0.734375,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    },
+    "parsing/kv_parse": {
+      "mean_test_fraction": 0.33333333333333337,
+      "pass_at_1": 0.125,
+      "pass_at_8": 1.0
+    },
+    "parsing/version_compare": {
+      "mean_test_fraction": 0.4322916666666667,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    },
+    "strings/case_by_index": {
+      "mean_test_fraction": 0.8489583333333334,
+      "pass_at_1": 0.8125,
+      "pass_at_8": 1.0
+    },
+    "strings/vowel_positions": {
+      "mean_test_fraction": 0.4947916666666667,
+      "pass_at_1": 0.25,
+      "pass_at_8": 1.0
+    }
+  },
+  "seed": 0,
+  "temperature": 0.8,
+  "wall_s": 805.3
+}
