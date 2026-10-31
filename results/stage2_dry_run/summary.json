@@ -1,0 +1,158 @@
+{
+  "base_dev": {
+    "pass_by_family": {
+      "dicts": 0.0,
+      "dp": 0.0,
+      "lists": 0.125,
+      "math": 0.0,
+      "parsing": 0.08333333333333333,
+      "strings": 0.375
+    },
+    "pass_overall": 0.09615384615384616,
+    "test_fraction_by_family": {
+      "dicts": 0.22916666666666669,
+      "dp": 0.16666666666666666,
+      "lists": 0.4166666666666667,
+      "math": 0.09375,
+      "parsing": 0.3541666666666667,
+      "strings": 0.4791666666666667
+    },
+    "test_fraction_overall": 0.2948717948717949
+  },
+  "base_eval_s": 274.5,
+  "collection": {
+    "attempts": 400,
+    "verified": 99,
+    "verified_by_phase": [
+      17,
+      34,
+      25,
+      16,
+      7
+    ],
+    "wall_s": 1456.7
+  },
+  "dev_tasks": 13,
+  "dtype": "bf16",
+  "model": "Qwen/Qwen2.5-Coder-1.5B",
+  "peak_rss_gb": 8.22,
+  "runs": {
+    "loss_fresh": {
+      "final_dev": {
+        "pass_by_family": {
+          "dicts": 0.125,
+          "dp": 0.0,
+          "lists": 0.125,
+          "math": 0.0,
+          "parsing": 0.08333333333333333,
+          "strings": 0.375
+        },
+        "pass_overall": 0.11538461538461539,
+        "test_fraction_by_family": {
+          "dicts": 0.5104166666666666,
+          "dp": 0.14583333333333334,
+          "lists": 0.5729166666666666,
+          "math": 0.11458333333333333,
+          "parsing": 0.4444444444444444,
+          "strings": 0.5104166666666666
+        },
+        "test_fraction_overall": 0.38782051282051283
+      },
+      "replay_counts": {
+        "dicts": 6,
+        "lists": 24,
+        "math": 3,
+        "strings": 27
+      },
+      "scoring_passes": 708,
+      "timing_s": {
+        "eval_s": 1621.350521326065,
+        "select_s": 251.82184624671936,
+        "train_s": 107.94022846221924
+      },
+      "wall_s": 1981.2
+    },
+    "sequential": {
+      "final_dev": {
+        "pass_by_family": {
+          "dicts": 0.0,
+          "dp": 0.0,
+          "lists": 0.125,
+          "math": 0.0,
+          "parsing": 0.16666666666666666,
+          "strings": 0.375
+        },
+        "pass_overall": 0.11538461538461539,
+        "test_fraction_by_family": {
+          "dicts": 0.40625,
+          "dp": 0.13541666666666666,
+          "lists": 0.4375,
+          "math": 0.11458333333333333,
+          "parsing": 0.46527777777777773,
+          "strings": 0.4583333333333333
+        },
+        "test_fraction_overall": 0.34615384615384615
+      },
+      "replay_counts": {},
+      "scoring_passes": 0,
+      "timing_s": {
+        "eval_s": 1568.984500169754,
+        "select_s": 0.0009734630584716797,
+        "train_s": 123.68867897987366
+      },
+      "wall_s": 1692.8
+    },
+    "uniform": {
+      "final_dev": {
+        "pass_by_family": {
+          "dicts": 0.125,
+          "dp": 0.125,
+          "lists": 0.125,
+          "math": 0.0,
+          "parsing": 0.16666666666666666,
+          "strings": 0.375
+        },
+        "pass_overall": 0.15384615384615385,
+        "test_fraction_by_family": {
+          "dicts": 0.5104166666666666,
+          "dp": 0.2604166666666667,
+          "lists": 0.5104166666666666,
+          "math": 0.11458333333333333,
+          "parsing": 0.46527777777777773,
+          "strings": 0.4583333333333333
+        },
+        "test_fraction_overall": 0.3926282051282052
+      },
+      "replay_counts": {
+        "dicts": 5,
+        "lists": 25,
+        "math": 5,
+        "strings": 26
+      },
+      "scoring_passes": 0,
+      "timing_s": {
+        "eval_s": 1586.8094964027405,
+        "select_s": 0.0014700889587402344,
+        "train_s": 108.93075895309448
+      },
+      "wall_s": 1695.8
+    }
+  },
+  "seed": 0,
+  "settings": {
+    "buffer_capacity": 200,
+    "collect_instances": 2,
+    "eval_instances": 1,
+    "grad_clip": 1.0,
+    "k_collect": 8,
+    "k_eval": 4,
+    "lora_alpha": 16,
+    "lora_r": 8,
+    "lr": 0.0001,
+    "max_new": 200,
+    "new_tokens_per_step": 600,
+    "replay_tokens_per_step": 600,
+    "steps_per_phase": 3,
+    "temperature": 0.8
+  }
+}

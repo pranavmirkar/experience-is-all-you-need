@@ -342,7 +342,7 @@ The 1.5B model gives a usable base (section 6e), so I propose using it as the St
 
 Everything above touches dev and train data only. The final-test split stays locked.
 
-## 10. Plumbing dry run (settings fixed before the run)
+## 10. Plumbing dry run (settings fixed before the run; results in 10b)
 
 Script `scripts/stage2_dry_run.py`, output `results/stage2_dry_run/`. **Purpose: exercise the full path and measure
 its cost. Not an experiment.** One seed, tiny samples, no tuning, no hypothesis test. Whatever the numbers
@@ -380,3 +380,71 @@ Known limitations (decided in advance):
 - A crash test on the 0.5B model with tiny settings and reference solutions injected as verified episodes
   confirmed the code path (collection, gate rejection, replay only from earlier phases, 10 loss scoring
   passes counted for `loss_fresh`, adapter reset between policies). Its numbers are meaningless and not kept.
+
+### 10b. Dry-run results (measured; plumbing and cost, not evidence about policies)
+
+Run on 2026-10-31 after a container restart killed the first attempt during model loading (nothing was saved
+from it; the run was restarted with identical settings). Files: `results/stage2_dry_run/` (`collection.jsonl`,
+`run_*.json`, `summary.json`). FINAL_TEST untouched.
+
+**Plumbing worked end to end.** 400 base-model attempts on TRAIN tasks were verified in the sandbox; 99 passed
+(by phase: strings 17, lists 34, dicts 25, math 16, dp 7) and became verified episodes. The buffer rejected all
+301 unverified attempts. Replay drew only from earlier phases. Adapters were reset between policies (same
+init seed). `loss_fresh` made 708 real forward-pass loss evaluations.
+
+| Policy | DEV pass after each phase (strings, lists, dicts, math, dp) | Final pass | Final tests passed |
+|---|---|---|---|
+| base (no adapter) | 0.096 | - | 0.295 |
+| sequential | 0.077, 0.077, 0.096, 0.135, 0.115 | 0.115 (6 of 52) | 0.346 |
+| uniform | 0.096, 0.096, 0.096, 0.096, 0.154 | 0.154 (8 of 52) | 0.393 |
+| loss_fresh | 0.096, 0.077, 0.077, 0.115, 0.115 | 0.115 (6 of 52) | 0.388 |
+
+**These differences are noise.** Each point is 52 samples with a standard error of about 0.04 to 0.05, there is
+one seed, and a single sample changes the rate by 0.019. 6 vs 8 of 52 says nothing about the policies. No
+hypothesis was tested and none of these numbers is a claim.
+
+What the run does show:
+
+- **Evaluation dominates cost.** Per policy run: evaluation about 1,590 s, training 110 to 125 s (15 optimiser
+  steps), versus a total of about 1,700 s. Collection took 1,457 s and the base evaluation 275 s. The whole
+  run took about 2.1 hours. A 5-point policy run costs about 28 minutes at this evaluation size, so a pilot
+  of P policies x S seeds costs roughly 0.5 x P x S hours plus one collection. For example 6 policies x 3
+  seeds is about 9 hours. Evaluation size, not training, sets the budget.
+- **Fresh-loss scoring is expensive.** `loss_fresh` spent 252 s scoring candidates (708 forward passes,
+  about 0.36 s each) against 108 s for the training steps themselves, 2.3x the training cost. In Stage 1 this
+  is the `scoring_passes` column, and it is a real cost that the equal-budget comparison has to count.
+- **Replay follows pool size.** `uniform` and `loss_fresh` replayed mostly strings and lists (26 and 25;
+  27 and 24), the largest earlier pools, and rarely dicts and math (5 and 5; 6 and 3). Unbalanced replay is
+  expected when the buffer pool is imbalanced; a coverage-based policy would behave differently.
+- **Phase pools are small and uneven.** Only 7 verified `dp` episodes exist, so any `dp` training is on very
+  little data. Success rates of the base model on TRAIN tasks differed a lot by family (strings 21%, lists
+  43%, dicts 31%, math 20%, dp 9%).
+- Peak memory 8.2 GB (bf16).
+
+**Open problem: bf16 may degrade sampling quality.** On the same 13 DEV tasks (first instance of each dev
+template), the earlier fp32 diagnostic (6e) gave 25 of 104 full passes (0.24) and 0.47 of tests passed. The
+bf16 base model here gave 5 of 52 (0.096) and 0.295 (about 2.5 standard errors apart on pass rate; different random
+seeds and sample counts). This looks like a real quality drop from bf16, though the evidence is weak. If it holds,
+bf16 evaluation and bf16 training would not be comparable with the fp32 numbers, and the 4x speed gain from bf16
+costs accuracy. Resolve this before any pilot: run the bf16 base model on the same 26-task, k=8 protocol as 6e
+(about 10 minutes) and compare directly, and consider fp32 evaluation with bf16 training only if the cost is
+acceptable.
+
+Other limitations of the dry run (as decided in advance, plus two found):
+
+- Training episodes are the model's own verified successes without any correction, so the update is
+  self-distillation; a "new data" effect on unseen families is not expected from it.
+- Training on 15 steps and 99 episodes is tiny. A flat result here would be unsurprising and says nothing.
+- `sequential` (scope: current phase) replays other current-phase episodes, so it is "extra steps on current
+  data", not zero extra data; this follows the Stage 1 definition.
+
+## 11. Proposed next steps (need your go-ahead)
+
+1. **Resolve bf16 vs fp32** (about 10 minutes, no download): rerun the 6e protocol (26 dev tasks, k=8,
+   T=0.8) with the bf16 base model and compare per template with the fp32 result.
+2. **Decide evaluation size and budget.** The pilot is limited by evaluation. Options: fewer, larger evaluation
+   points (for example only before and after the stream), larger k on fewer tasks, or running on a GPU
+   (needs a provider and a budget; I have not chosen one). I would want your budget in hours of CPU time.
+3. **Paired-variance pilot** to size the H1 margin, using the cheapest design that still has acceptable standard
+   error, then pre-register H1 before any final-test use.
+4. Add a probe split (dev instances at a separate offset) before running any policy that reads a probe.

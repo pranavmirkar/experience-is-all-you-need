@@ -30,10 +30,10 @@ gradient-based selectors (specified in `docs/experiment_protocol.md`, Stage 2), 
 
 ## Next smallest steps
 
-1. Done in Stage 2 so far: sandboxed executor and a 52-template task bank (bank v2) (`docs/stage2_plan.md`).
-2. Done: smoke test on Qwen2.5-Coder-0.5B (results in `docs/stage2_plan.md` section 6; 10 tok/s, LoRA step under 1 s, base dev full-pass 2 of 14).
-3. Gate 2 (benchmark discriminates) was weak with 0.5B; with Qwen2.5-Coder-1.5B it is supported with caveats (dev pass@1 0.212, 12 of 13 templates sometimes solved). Earlier 0.5B finding: on bank v2 sampled dev pass@1 is 0.058 and 8 of 13 dev templates are never fully passed in 16 samples. A two-shot prompt did not help (pass@1 0.053). Next: LoRA timing for 1.5B, plumbing dry run, paired-variance pilot (`docs/stage2_plan.md` section 9).
-4. Paired-variance pilot on dev tasks before pre-registering the H1 margin.
+1. Done in Stage 2: sandbox, 52-template task bank, model choice (Qwen2.5-Coder-1.5B), LoRA timing, plumbing dry run (`docs/stage2_plan.md` sections 6 to 10). No policy comparison has been made; the dry run is plumbing and cost only.
+2. Resolve whether bf16 degrades sampling quality (fp32 0.24 vs bf16 0.096 on the same 13 dev tasks, weak evidence) before any pilot.
+3. Decide the evaluation size and CPU budget: evaluation is about 90% of the cost (about 28 minutes per 5-point policy run).
+4. Paired-variance pilot to size the H1 margin; pre-register H1 before touching the locked final test.
 5. Literature: remaining open items are listed in `docs/literature_review.md` (53 entries beyond the brief).
 
 See `docs/experiment_protocol.md` for definitions, assumptions and the revision log.
